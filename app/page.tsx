@@ -44,6 +44,7 @@ interface Lead {
   data_entrada: string; // ISO Date
   primeira_interacao?: string; // ISO Date
   origem?: string;
+  tem_atendimento?: boolean;
 }
 
 interface RawLead {
@@ -78,9 +79,11 @@ interface KPI {
 
 export default function Dashboard() {
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [leadsAll, setLeadsAll] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<string>('Todos');
+  const [dataMode, setDataMode] = useState<'atendimentos' | 'geral'>('atendimentos');
 
   // Fetch Data
   const fetchLeads = async () => {
@@ -130,27 +133,63 @@ export default function Dashboard() {
   useEffect(() => {
     fetchLeads();
   }, []);
+ 
+  const fetchLeadsAll = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/proxy-leads-all');
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || `Erro ${res.status}`);
+      }
+      const data = await res.json();
+      const rawLeads = Array.isArray(data) ? data : (data.leads || data.data || []);
+      const normalizedLeads: Lead[] = (rawLeads as RawLead[]).map(l => ({
+        id: l.id ?? Math.random().toString(),
+        nome: l.nome ?? l.name ?? 'Sem Nome',
+        telefone: l.telefone ?? l.phone ?? l.celular ?? '',
+        email: l.email ?? '',
+        status: l.status ?? 'Novo',
+        time: l.time ?? l.team ?? l.fila ?? 'Geral',
+        data_entrada: l.data_entrada ?? l.created_at ?? new Date().toISOString(),
+        primeira_interacao: l.primeira_interacao ?? l.first_interaction ?? undefined,
+        origem: l.origem ?? 'Site',
+        tem_atendimento: (l as any).tem_atendimento === true
+      }));
+      setLeadsAll(normalizedLeads);
+    } catch (err: unknown) {
+      if (err instanceof Error) setError(err.message || 'Falha ao carregar leads');
+      else if (typeof err === 'string') setError(err || 'Falha ao carregar leads');
+      else setError('Falha ao carregar leads');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // --- Process Data ---
 
+  const currentLeads = dataMode === 'geral' ? leadsAll : leads;
+
   const teams = useMemo(() => {
-    const allTeams = new Set(leads.map(l => l.time || 'Geral'));
+    const allTeams = new Set(currentLeads.map(l => l.time || 'Geral'));
     return ['Todos', ...Array.from(allTeams)];
-  }, [leads]);
+  }, [currentLeads]);
 
   const filteredLeads = useMemo(() => {
-    if (selectedTeam === 'Todos') return leads;
-    return leads.filter(l => l.time === selectedTeam);
-  }, [leads, selectedTeam]);
+    if (selectedTeam === 'Todos') return currentLeads;
+    return currentLeads.filter(l => l.time === selectedTeam);
+  }, [currentLeads, selectedTeam]);
 
   // KPIs
   const kpis = useMemo(() => {
     const total = filteredLeads.length;
     const agendamentos = filteredLeads.filter(l => l.status.toLowerCase().includes('visita')).length;
     const atendimento = filteredLeads.filter(l => ['em atendimento', 'contato feito'].includes(l.status.toLowerCase())).length;
+    const pendentes = filteredLeads.filter(l => !l.primeira_interacao).length;
     const conversao = total > 0 ? ((agendamentos / total) * 100).toFixed(1) + '%' : '0%';
 
-    return { totalLeads: total, agendamentos, conversao, atendimento };
+    return { totalLeads: total, agendamentos, conversao, atendimento, pendentes };
   }, [filteredLeads]);
 
   // Charts Data
@@ -302,6 +341,28 @@ export default function Dashboard() {
             <Filter size={16} />
             <span className="font-medium">Filtrar por Time</span>
           </div>
+          <div className="flex items-center gap-2 ml-auto">
+            <button
+              onClick={() => { setDataMode('atendimentos'); }}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium tracking-wide transition-all ${
+                dataMode === 'atendimentos'
+                  ? 'bg-[#c89968] text-[#FAF9F6]'
+                  : 'bg-white/90 text-[#3d2e28] border border-[#684e3a]/30 hover:border-[#c89968]'
+              }`}
+            >
+              Atendimentos
+            </button>
+            <button
+              onClick={() => { setDataMode('geral'); if (leadsAll.length === 0) fetchLeadsAll(); }}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium tracking-wide transition-all ${
+                dataMode === 'geral'
+                  ? 'bg-[#c89968] text-[#FAF9F6]'
+                  : 'bg-white/90 text-[#3d2e28] border border-[#684e3a]/30 hover:border-[#c89968]'
+              }`}
+            >
+              Leads gerais
+            </button>
+          </div>
           {teams.map(team => (
             <button
               key={team}
@@ -318,7 +379,7 @@ export default function Dashboard() {
         </div>
 
         <section>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             <KpiCard
               title="Total Leads Hoje"
               value={kpis.totalLeads}
@@ -338,6 +399,11 @@ export default function Dashboard() {
               title="Em Atendimento"
               value={kpis.atendimento}
               icon={<MessageCircle className="h-5 w-5 text-[#c89968]" />}
+            />
+            <KpiCard
+              title="Pendentes (Sem Atendimento)"
+              value={kpis.pendentes}
+              icon={<Clock className="h-5 w-5 text-[#c89968]" />}
             />
           </div>
         </section>
@@ -549,6 +615,89 @@ export default function Dashboard() {
                         </tr>
                       );
                     })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="p-12 text-center">
+                <p className="text-sm sm:text-base font-medium tracking-wide text-[#c89968]">
+                  Nenhum dado encontrado
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section>
+          <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 overflow-hidden">
+            <div className="p-6 border-b border-[#684e3a]/15 flex justify-between items-center">
+              <div>
+                <h3 className="text-sm sm:text-base font-semibold tracking-wide text-[#3d2e28] uppercase">
+                  Leads Pendentes
+                </h3>
+                <p className="text-xs text-[#684e3a] mt-1 tracking-wide">
+                  Chegaram no sistema e ainda não iniciaram atendimento
+                </p>
+              </div>
+              <span className="text-xs sm:text-sm text-[#684e3a] font-medium">
+                {filteredLeads.filter(l => !l.primeira_interacao).length} registros
+              </span>
+            </div>
+            {filteredLeads.filter(l => !l.primeira_interacao).length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-[#3d2e28]">
+                  <thead className="bg-[#FAF9F6] text-[11px] uppercase font-semibold tracking-[0.18em] text-[#684e3a]">
+                    <tr>
+                      <th className="px-6 py-4">Data</th>
+                      <th className="px-6 py-4">Nome</th>
+                      <th className="px-6 py-4">Contato</th>
+                      <th className="px-6 py-4">Email</th>
+                      <th className="px-6 py-4">Status</th>
+                      <th className="px-6 py-4">Time</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#684e3a]/10">
+                    {filteredLeads.filter(l => !l.primeira_interacao).map(lead => (
+                      <tr key={lead.id} className="hover:bg-[#c89968]/5 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-semibold text-[#3d2e28]">
+                            {new Date(lead.data_entrada).toLocaleDateString('pt-BR')}
+                          </div>
+                          <div className="text-xs text-[#684e3a]">
+                            {new Date(lead.data_entrada).toLocaleTimeString('pt-BR', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 font-medium text-[#3d2e28]">{lead.nome}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-col items-start">
+                            <div className="flex items-center gap-1.5 text-[#3d2e28] font-medium">
+                              <Phone size={14} className="text-[#684e3a]" />
+                              <span>{formatPhoneNumber(lead.telefone)}</span>
+                            </div>
+                            <CopyAction value={lead.telefone} />
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 max-w-[220px]">
+                          <div className="flex flex-col items-start">
+                            <span className="text-sm text-[#684e3a] truncate w-full" title={lead.email}>
+                              {lead.email || '--'}
+                            </span>
+                            {lead.email && <CopyAction value={lead.email} />}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[#c89968]/15 text-[#3d2e28]">
+                            {lead.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-[#3d2e28]">
+                          {lead.time || '-'}
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
