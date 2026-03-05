@@ -116,6 +116,10 @@ export default function Dashboard() {
   const [viewMode, setViewMode] = useState<'operacional' | 'meta-ads'>('operacional');
   const [dataMode, setDataMode] = useState<'atendimentos' | 'geral'>('atendimentos');
 
+  // Estados para filtros da tabela Meta Ads
+  const [selectedAccount, setSelectedAccount] = useState<string>('Todas as Contas');
+  const [selectedStatus, setSelectedStatus] = useState<string>('Todos os Status');
+
   // Fetch Data
   const fetchLeads = async () => {
     setLoading(true);
@@ -226,6 +230,55 @@ export default function Dashboard() {
   // --- Process Data ---
 
   const currentLeads = dataMode === 'geral' ? leadsAll : leads;
+
+  // Lógica de ordenação e filtragem para Meta Ads
+  const sortedAndFilteredCampaigns = useMemo(() => {
+    let filtered = metaCampaigns;
+
+    // Aplicar filtros
+    if (selectedAccount !== 'Todas as Contas') {
+      filtered = filtered.filter((campaign: MetaCampaign) => campaign.teamName === selectedAccount);
+    }
+
+    if (selectedStatus !== 'Todos os Status') {
+      const statusMap: Record<string, string[]> = {
+        'Ativas': ['active', 'ACTIVE'],
+        'Pausadas': ['paused', 'PAUSED']
+      };
+
+      const validStatuses = statusMap[selectedStatus] || [];
+      filtered = filtered.filter((campaign: MetaCampaign) => validStatuses.includes(campaign.status));
+    }
+
+    // Ordenação padrão: Conta > Status (Ativas primeiro) > Valor gasto (desc)
+    return filtered.sort((a: MetaCampaign, b: MetaCampaign) => {
+      // 1) Agrupar por Conta
+      const accountCompare = a.teamName.localeCompare(b.teamName);
+      if (accountCompare !== 0) return accountCompare;
+
+      // 2) Dentro da conta: Ativas no topo
+      const getStatusPriority = (status: string) => {
+        const statusLower = status.toLowerCase();
+        if (statusLower === 'active' || statusLower === 'ativa') return 0;
+        if (statusLower === 'paused' || statusLower === 'pausada') return 1;
+        return 2;
+      };
+
+      const statusCompare = getStatusPriority(a.status) - getStatusPriority(b.status);
+      if (statusCompare !== 0) return statusCompare;
+
+      // 3) Por fim: Valor gasto (desc)
+      const spendA = Number(a.spend) || 0;
+      const spendB = Number(b.spend) || 0;
+      return spendB - spendA;
+    });
+  }, [metaCampaigns, selectedAccount, selectedStatus]);
+
+  // Contas únicas para o filtro
+  const uniqueAccounts = useMemo(() => {
+    const accounts = [...new Set(metaCampaigns.map((c: MetaCampaign) => c.teamName))].sort();
+    return ['Todas as Contas', ...accounts];
+  }, [metaCampaigns]);
 
   const teams = useMemo(() => {
     const allTeams = new Set(currentLeads.map(l => l.time || 'Geral'));
@@ -598,18 +651,52 @@ export default function Dashboard() {
 
               {/* Campaigns Table */}
               <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 overflow-hidden">
-                <div className="p-6 border-b border-[#684e3a]/15 flex justify-between items-center">
-                  <div>
-                    <h3 className="text-sm sm:text-base font-semibold tracking-wide text-[#3d2e28] uppercase">
-                      Detalhamento de Campanhas Meta Ads
-                    </h3>
-                    <p className="text-xs text-[#684e3a] mt-1 tracking-wide">
-                      Métricas de desempenho por campanha
-                    </p>
+                <div className="p-6 border-b border-[#684e3a]/15">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                      <h3 className="text-sm sm:text-base font-semibold tracking-wide text-[#3d2e28] uppercase">
+                        Detalhamento de Campanhas Meta Ads
+                      </h3>
+                      <p className="text-xs text-[#684e3a] mt-1 tracking-wide">
+                        Métricas de desempenho por campanha
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs sm:text-sm text-[#684e3a] font-medium">
+                        {sortedAndFilteredCampaigns.length} de {metaCampaigns.length} campanhas
+                      </span>
+                    </div>
                   </div>
-                  <span className="text-xs sm:text-sm text-[#684e3a] font-medium">
-                    {metaCampaigns.length} campanhas
-                  </span>
+
+                  <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                    <div className="flex flex-col">
+                      <label className="text-xs font-medium text-[#684e3a] mb-1 uppercase tracking-wide">Filtrar por Conta</label>
+                      <select
+                        value={selectedAccount}
+                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedAccount(e.target.value)}
+                        className="px-3 py-2 text-sm border border-[#684e3a]/30 rounded-lg bg-white text-[#3d2e28] focus:outline-none focus:ring-2 focus:ring-[#c89968]/50 focus:border-[#c89968]"
+                      >
+                        {uniqueAccounts.map((account: string) => (
+                          <option key={account} value={account}>
+                            {account}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col">
+                      <label className="text-xs font-medium text-[#684e3a] mb-1 uppercase tracking-wide">Filtrar por Status</label>
+                      <select
+                        value={selectedStatus}
+                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedStatus(e.target.value)}
+                        className="px-3 py-2 text-sm border border-[#684e3a]/30 rounded-lg bg-white text-[#3d2e28] focus:outline-none focus:ring-2 focus:ring-[#c89968]/50 focus:border-[#c89968]"
+                      >
+                        <option value="Todos os Status">Todos os Status</option>
+                        <option value="Ativas">Ativas</option>
+                        <option value="Pausadas">Pausadas</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs text-[#3d2e28] min-w-[1200px]">
@@ -629,7 +716,7 @@ export default function Dashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#684e3a]/10">
-                      {metaCampaigns.map((campaign, index) => {
+                      {sortedAndFilteredCampaigns.map((campaign: MetaCampaign, index: number) => {
                         const cplValue = campaign.leads > 0 ? Number(campaign.spend) / campaign.leads : 0;
                         const formatDate = (dateString?: string) => {
                           if (!dateString) return '--';
