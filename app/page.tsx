@@ -77,30 +77,6 @@ interface KPI {
   atendimento: number;
 }
 
-<<<<<<< HEAD
-interface MetaCampaign {
-  campaign_name: string;
-  spend: string;
-  impressions: number;
-  clicks: number;
-  leads: number;
-  ctr: string;
-  cpc: string;
-  cpl: string;
-  teamName: string;
-}
-
-interface MetaSummary {
-  totalSpend: string;
-  totalImpressions: number;
-  totalClicks: number;
-  totalLeads: number;
-  avgCpc: string;
-  avgCpl: string;
-}
-
-=======
->>>>>>> a42a9ac312fb49c78fdc05f0c5f9e57011bfd8da
 // --- Mock Data Fallback (ONLY for initial structure dev, replaced by API error in prod) ---
 // User requested NO Mock Data if API fails. 
 // So we start with empty state and show error if fetch fails.
@@ -108,19 +84,10 @@ interface MetaSummary {
 export default function Dashboard() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [leadsAll, setLeadsAll] = useState<Lead[]>([]);
-<<<<<<< HEAD
-  const [metaCampaigns, setMetaCampaigns] = useState<MetaCampaign[]>([]);
-  const [metaSummary, setMetaSummary] = useState<MetaSummary | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedTeam, setSelectedTeam] = useState<string>('Todos');
-  const [dataMode, setDataMode] = useState<'atendimentos' | 'geral' | 'meta-ads'>('atendimentos');
-=======
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<string>('Todos');
   const [dataMode, setDataMode] = useState<'atendimentos' | 'geral'>('atendimentos');
->>>>>>> a42a9ac312fb49c78fdc05f0c5f9e57011bfd8da
 
   // Fetch Data
   const fetchLeads = async () => {
@@ -168,17 +135,8 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-<<<<<<< HEAD
-    if (dataMode === 'meta-ads') {
-      if (metaCampaigns.length === 0) fetchMetaAds();
-    } else {
-      fetchLeads();
-    }
-  }, [dataMode]);
-=======
     fetchLeads();
   }, []);
->>>>>>> a42a9ac312fb49c78fdc05f0c5f9e57011bfd8da
  
   const fetchLeadsAll = async () => {
     setLoading(true);
@@ -213,30 +171,6 @@ export default function Dashboard() {
     }
   };
 
-<<<<<<< HEAD
-  const fetchMetaAds = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/meta-insights');
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || `Erro ${res.status}`);
-      }
-      const data = await res.json();
-      setMetaCampaigns(data.data || []);
-      setMetaSummary(data.summary || null);
-    } catch (err: unknown) {
-      if (err instanceof Error) setError(err.message || 'Falha ao carregar dados do Meta Ads');
-      else if (typeof err === 'string') setError(err || 'Falha ao carregar dados do Meta Ads');
-      else setError('Falha ao carregar dados do Meta Ads');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-=======
->>>>>>> a42a9ac312fb49c78fdc05f0c5f9e57011bfd8da
   // --- Process Data ---
 
   const currentLeads = dataMode === 'geral' ? leadsAll : leads;
@@ -395,11 +329,7 @@ export default function Dashboard() {
               Relatórios
             </Link>
             <button
-<<<<<<< HEAD
-              onClick={() => dataMode === 'meta-ads' ? fetchMetaAds() : fetchLeads()}
-=======
               onClick={fetchLeads}
->>>>>>> a42a9ac312fb49c78fdc05f0c5f9e57011bfd8da
               className="inline-flex items-center justify-center h-9 w-9 rounded-full border border-[#c89968]/40 hover:bg-[#c89968]/15 text-[#3d2e28] transition-colors"
               title="Atualizar"
             >
@@ -436,17 +366,6 @@ export default function Dashboard() {
             >
               Leads gerais
             </button>
-<<<<<<< HEAD
-            <button
-              onClick={() => { setDataMode('meta-ads'); }}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium tracking-wide transition-all ${
-                dataMode === 'meta-ads'
-                  ? 'bg-[#c89968] text-[#FAF9F6]'
-                  : 'bg-white/90 text-[#3d2e28] border border-[#684e3a]/30 hover:border-[#c89968]'
-              }`}
-            >
-              Métricas Meta Ads
-            </button>
           </div>
           {teams.map(team => (
             <button
@@ -464,88 +383,7 @@ export default function Dashboard() {
         </div>
 
         <section>
-          {dataMode === 'meta-ads' ? (
-            <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 overflow-hidden">
-              <div className="p-6 border-b border-[#684e3a]/15 flex justify-between items-center">
-                <div>
-                  <h3 className="text-sm sm:text-base font-semibold tracking-wide text-[#3d2e28] uppercase">
-                    Detalhamento de Campanhas Meta Ads
-                  </h3>
-                  <p className="text-xs text-[#684e3a] mt-1 tracking-wide">
-                    Métricas de desempenho por campanha
-                  </p>
-                </div>
-                <span className="text-xs sm:text-sm text-[#684e3a] font-medium">
-                  {metaCampaigns.length} campanhas
-                </span>
-              </div>
-              {metaCampaigns.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm text-[#3d2e28]">
-                    <thead className="bg-[#FAF9F6] text-[11px] uppercase font-semibold tracking-[0.18em] text-[#684e3a]">
-                      <tr>
-                        <th className="px-6 py-4">Nome da Campanha</th>
-                        <th className="px-6 py-4">Conta / Operação</th>
-                        <th className="px-6 py-4">Valor Gasto</th>
-                        <th className="px-6 py-4">Impressões</th>
-                        <th className="px-6 py-4">Cliques</th>
-                        <th className="px-6 py-4">CTR (%)</th>
-                        <th className="px-6 py-4">Leads</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#684e3a]/10">
-                      {metaCampaigns.map((campaign, index) => (
-                        <tr
-                          key={index}
-                          className="hover:bg-[#c89968]/5 transition-colors"
-                        >
-                          <td className="px-6 py-4 font-medium text-[#3d2e28]">
-                            {campaign.campaign_name}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[#3d2e28]/10 text-[#3d2e28]">
-                              {campaign.teamName}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm font-semibold text-[#3d2e28]">
-                              R$ {parseFloat(campaign.spend).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-[#3d2e28]">
-                            {campaign.impressions.toLocaleString('pt-BR')}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-[#3d2e28]">
-                            {campaign.clicks.toLocaleString('pt-BR')}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[#c89968]/15 text-[#3d2e28]">
-                              {campaign.ctr}%
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide ${
-                              campaign.leads > 0 
-                                ? 'bg-[#3d2e28]/10 text-[#3d2e28]'
-                                : 'bg-[#684e3a]/10 text-[#684e3a]'
-                            }`}>
-                              {campaign.leads.toLocaleString('pt-BR')}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="p-12 text-center">
-                  <p className="text-sm sm:text-base font-medium tracking-wide text-[#c89968]">
-                    Nenhuma campanha encontrada
-                  </p>
-                </div>
-              )}
-            </div>
-          ) : filteredLeads.length > 0 ? (
+          {filteredLeads.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 lg:col-span-2 p-6">
                 <div className="flex items-center justify-between mb-6">
@@ -638,7 +476,6 @@ export default function Dashboard() {
           )}
         </section>
 
-        {dataMode !== 'meta-ads' && (
         <section>
           <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 overflow-hidden">
             <div className="p-6 border-b border-[#684e3a]/15 flex justify-between items-center">
@@ -764,13 +601,6 @@ export default function Dashboard() {
             )}
           </div>
         </section>
-<<<<<<< HEAD
-        )}
-
-        {dataMode !== 'meta-ads' && (
-=======
-
->>>>>>> a42a9ac312fb49c78fdc05f0c5f9e57011bfd8da
         <section>
           <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 overflow-hidden">
             <div className="p-6 border-b border-[#684e3a]/15 flex justify-between items-center">
@@ -853,7 +683,6 @@ export default function Dashboard() {
             )}
           </div>
         </section>
-        )}
       </main>
     </div>
   );
