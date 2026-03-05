@@ -186,7 +186,7 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
- 
+
   const fetchLeadsAll = async () => {
     setLoading(true);
     setError(null);
@@ -334,7 +334,7 @@ export default function Dashboard() {
           </div>
           <p className="text-sm text-[#684e3a] mb-6 leading-relaxed">{error}</p>
           <button 
-            onClick={() => viewMode === 'meta-ads' ? fetchMetaAds() : fetchLeads()}
+            onClick={fetchLeads}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#3d2e28] text-[#FAF9F6] text-sm font-medium tracking-wide hover:bg-[#684e3a] transition-colors"
           >
             <RefreshCcw size={18} />
@@ -561,121 +561,7 @@ export default function Dashboard() {
             </div>
           )}
         </section>
-        ) : (
-        /* Meta Ads View */
-        <section>
-          {metaCampaigns.length > 0 ? (
-            <>
-              {/* KPI Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <KpiCard
-                  title="Investimento Total"
-                  value={`R$ ${metaSummary?.totalSpend || '0'}`}
-                  icon={<DollarSign className="h-6 w-6 text-[#c89968]" />}
-                />
-                <KpiCard
-                  title="Impressões"
-                  value={metaSummary?.totalImpressions?.toLocaleString('pt-BR') || '0'}
-                  icon={<Eye className="h-6 w-6 text-[#c89968]" />}
-                />
-                <KpiCard
-                  title="Cliques"
-                  value={metaSummary?.totalClicks?.toLocaleString('pt-BR') || '0'}
-                  icon={<MousePointer className="h-6 w-6 text-[#c89968]" />}
-                />
-                <KpiCard
-                  title="Leads Gerados"
-                  value={metaSummary?.totalLeads?.toLocaleString('pt-BR') || '0'}
-                  icon={<Target className="h-6 w-6 text-[#c89968]" />}
-                />
-              </div>
 
-              {/* Campaigns Table */}
-              <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 overflow-hidden">
-                <div className="p-6 border-b border-[#684e3a]/15 flex justify-between items-center">
-                  <div>
-                    <h3 className="text-sm sm:text-base font-semibold tracking-wide text-[#3d2e28] uppercase">
-                      Detalhamento de Campanhas Meta Ads
-                    </h3>
-                    <p className="text-xs text-[#684e3a] mt-1 tracking-wide">
-                      Métricas de desempenho por campanha
-                    </p>
-                  </div>
-                  <span className="text-xs sm:text-sm text-[#684e3a] font-medium">
-                    {metaCampaigns.length} campanhas
-                  </span>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm text-[#3d2e28]">
-                    <thead className="bg-[#FAF9F6] text-[11px] uppercase font-semibold tracking-[0.18em] text-[#684e3a]">
-                      <tr>
-                        <th className="px-6 py-4">Nome da Campanha</th>
-                        <th className="px-6 py-4">Conta / Operação</th>
-                        <th className="px-6 py-4">Valor Gasto</th>
-                        <th className="px-6 py-4">Impressões</th>
-                        <th className="px-6 py-4">Cliques</th>
-                        <th className="px-6 py-4">CTR (%)</th>
-                        <th className="px-6 py-4">Leads</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#684e3a]/10">
-                      {metaCampaigns.map((campaign, index) => (
-                        <tr
-                          key={index}
-                          className="hover:bg-[#c89968]/5 transition-colors"
-                        >
-                          <td className="px-6 py-4 font-medium text-[#3d2e28]">
-                            {campaign.campaign_name}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[#3d2e28]/10 text-[#3d2e28]">
-                              {campaign.teamName}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm font-semibold text-[#3d2e28]">
-                              R$ {parseFloat(campaign.spend).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-[#3d2e28]">
-                            {campaign.impressions.toLocaleString('pt-BR')}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-[#3d2e28]">
-                            {campaign.clicks.toLocaleString('pt-BR')}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[#c89968]/15 text-[#3d2e28]">
-                              {campaign.ctr}%
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide ${
-                              campaign.leads > 0 
-                                ? 'bg-[#3d2e28]/10 text-[#3d2e28]'
-                                : 'bg-[#684e3a]/10 text-[#684e3a]'
-                            }`}>
-                              {campaign.leads.toLocaleString('pt-BR')}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 p-12 text-center">
-              <p className="text-sm sm:text-base font-medium tracking-wide text-[#c89968]">
-                Nenhuma campanha encontrada
-              </p>
-            </div>
-          )}
-        </section>
-        )}
-
-        {/* Tabela de Detalhamento de Leads - Apenas para Visão Operacional */}
-        {viewMode === 'operacional' && (
         <section>
           <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 overflow-hidden">
             <div className="p-6 border-b border-[#684e3a]/15 flex justify-between items-center">
@@ -801,6 +687,199 @@ export default function Dashboard() {
             )}
           </div>
         </section>
+        <section>
+          <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 overflow-hidden">
+            <div className="p-6 border-b border-[#684e3a]/15 flex justify-between items-center">
+              <div>
+                <h3 className="text-sm sm:text-base font-semibold tracking-wide text-[#3d2e28] uppercase">
+                  Leads Pendentes
+                </h3>
+                <p className="text-xs text-[#684e3a] mt-1 tracking-wide">
+                  Chegaram no sistema e ainda não iniciaram atendimento
+                </p>
+              </div>
+              <span className="text-xs sm:text-sm text-[#684e3a] font-medium">
+                {filteredLeads.filter(l => !l.primeira_interacao).length} registros
+              </span>
+            </div>
+            {filteredLeads.filter(l => !l.primeira_interacao).length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-[#3d2e28]">
+                  <thead className="bg-[#FAF9F6] text-[11px] uppercase font-semibold tracking-[0.18em] text-[#684e3a]">
+                    <tr>
+                      <th className="px-6 py-4">Data</th>
+                      <th className="px-6 py-4">Nome</th>
+                      <th className="px-6 py-4">Contato</th>
+                      <th className="px-6 py-4">Email</th>
+                      <th className="px-6 py-4">Status</th>
+                      <th className="px-6 py-4">Time</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#684e3a]/10">
+                    {filteredLeads.filter(l => !l.primeira_interacao).map(lead => (
+                      <tr key={lead.id} className="hover:bg-[#c89968]/5 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-semibold text-[#3d2e28]">
+                            {new Date(lead.data_entrada).toLocaleDateString('pt-BR')}
+                          </div>
+                          <div className="text-xs text-[#684e3a]">
+                            {new Date(lead.data_entrada).toLocaleTimeString('pt-BR', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 font-medium text-[#3d2e28]">{lead.nome}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-col items-start">
+                            <div className="flex items-center gap-1.5 text-[#3d2e28] font-medium">
+                              <Phone size={14} className="text-[#684e3a]" />
+                              <span>{formatPhoneNumber(lead.telefone)}</span>
+                            </div>
+                            <CopyAction value={lead.telefone} />
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 max-w-[220px]">
+                          <div className="flex flex-col items-start">
+                            <span className="text-sm text-[#684e3a] truncate w-full" title={lead.email}>
+                              {lead.email || '--'}
+                            </span>
+                            {lead.email && <CopyAction value={lead.email} />}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[#c89968]/15 text-[#3d2e28]">
+                            {lead.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-[#3d2e28]">
+                          {lead.time || '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="p-12 text-center">
+                <p className="text-sm sm:text-base font-medium tracking-wide text-[#c89968]">
+                  Nenhum dado encontrado
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+        ) : (
+        /* Meta Ads View */
+        <section>
+          {metaCampaigns.length > 0 ? (
+            <>
+              {/* KPI Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <KpiCard
+                  title="Investimento Total"
+                  value={`R$ ${metaSummary?.totalSpend || '0'}`}
+                  icon={<DollarSign className="h-6 w-6 text-[#c89968]" />}
+                />
+                <KpiCard
+                  title="Impressões"
+                  value={metaSummary?.totalImpressions?.toLocaleString('pt-BR') || '0'}
+                  icon={<Eye className="h-6 w-6 text-[#c89968]" />}
+                />
+                <KpiCard
+                  title="Cliques"
+                  value={metaSummary?.totalClicks?.toLocaleString('pt-BR') || '0'}
+                  icon={<MousePointer className="h-6 w-6 text-[#c89968]" />}
+                />
+                <KpiCard
+                  title="Leads Gerados"
+                  value={metaSummary?.totalLeads?.toLocaleString('pt-BR') || '0'}
+                  icon={<Target className="h-6 w-6 text-[#c89968]" />}
+                />
+              </div>
+
+              {/* Campaigns Table */}
+              <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 overflow-hidden">
+                <div className="p-6 border-b border-[#684e3a]/15 flex justify-between items-center">
+                  <div>
+                    <h3 className="text-sm sm:text-base font-semibold tracking-wide text-[#3d2e28] uppercase">
+                      Detalhamento de Campanhas Meta Ads
+                    </h3>
+                    <p className="text-xs text-[#684e3a] mt-1 tracking-wide">
+                      Métricas de desempenho por campanha
+                    </p>
+                  </div>
+                  <span className="text-xs sm:text-sm text-[#684e3a] font-medium">
+                    {metaCampaigns.length} campanhas
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm text-[#3d2e28]">
+                    <thead className="bg-[#FAF9F6] text-[11px] uppercase font-semibold tracking-[0.18em] text-[#684e3a]">
+                      <tr>
+                        <th className="px-6 py-4">Nome da Campanha</th>
+                        <th className="px-6 py-4">Conta / Operação</th>
+                        <th className="px-6 py-4">Valor Gasto</th>
+                        <th className="px-6 py-4">Impressões</th>
+                        <th className="px-6 py-4">Cliques</th>
+                        <th className="px-6 py-4">CTR (%)</th>
+                        <th className="px-6 py-4">Leads</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#684e3a]/10">
+                      {metaCampaigns.map((campaign, index) => (
+                        <tr
+                          key={index}
+                          className="hover:bg-[#c89968]/5 transition-colors"
+                        >
+                          <td className="px-6 py-4 font-medium text-[#3d2e28]">
+                            {campaign.campaign_name}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[#3d2e28]/10 text-[#3d2e28]">
+                              {campaign.teamName}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm font-semibold text-[#3d2e28]">
+                              R$ {parseFloat(campaign.spend).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-[#3d2e28]">
+                            {campaign.impressions.toLocaleString('pt-BR')}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-[#3d2e28]">
+                            {campaign.clicks.toLocaleString('pt-BR')}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[#c89968]/15 text-[#3d2e28]">
+                              {campaign.ctr}%
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide ${
+                              campaign.leads > 0 
+                                ? 'bg-[#3d2e28]/10 text-[#3d2e28]'
+                                : 'bg-[#684e3a]/10 text-[#684e3a]'
+                            }`}>
+                              {campaign.leads.toLocaleString('pt-BR')}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 p-12 text-center">
+              <p className="text-sm sm:text-base font-medium tracking-wide text-[#c89968]">
+                Nenhuma campanha encontrada
+              </p>
+            </div>
+          )}
+        </section>
         )}
       </main>
     </div>
@@ -846,7 +925,7 @@ function CopyAction({ value }: { value: string }) {
       {!copied && (
         <ArrowUpRight 
           size={12} 
-          className="text-[#684e3a] group-hover:text-[#c89968] transition-colors" 
+          className="text-[#684e3a]/60 group-hover:text-[#c89968] transition-colors" 
         />
       )}
     </button>
