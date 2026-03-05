@@ -83,12 +83,14 @@ interface MetaCampaign {
   impressions: number;
   clicks: number;
   leads: number;
+  resultados: number;
   ctr: string;
   cpc: string;
   cpl: string;
   status: string;
   start_time: string;
   stop_time?: string;
+  updated_time?: string;
   teamName: string;
 }
 
@@ -712,6 +714,7 @@ export default function Dashboard() {
                         <th className="px-4 py-3">Cliques</th>
                         <th className="px-4 py-3">CTR (%)</th>
                         <th className="px-4 py-3">Leads</th>
+                        <th className="px-4 py-3">Resultados</th>
                         <th className="px-4 py-3">CPL</th>
                       </tr>
                     </thead>
@@ -762,7 +765,13 @@ export default function Dashboard() {
                               {formatDate(campaign.start_time)}
                             </td>
                             <td className="px-4 py-3 text-xs text-[#3d2e28] whitespace-nowrap">
-                              {formatDate(campaign.stop_time)}
+                              {campaign.status?.toLowerCase() === 'paused' ? (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold tracking-wide bg-slate-100 text-slate-700 border border-slate-200">
+                                  Pausada em: {formatDate(campaign.updated_time)}
+                                </span>
+                              ) : (
+                                formatDate(campaign.stop_time)
+                              )}
                             </td>
                             <td className="px-4 py-3">
                               <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold tracking-wide bg-[#3d2e28]/10 text-[#3d2e28]">
@@ -795,6 +804,15 @@ export default function Dashboard() {
                                   : 'bg-[#684e3a]/10 text-[#684e3a]'
                               }`}>
                                 {new Intl.NumberFormat('pt-BR').format(Number(campaign.leads))}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold tracking-wide ${
+                                Number(campaign.resultados) > 0
+                                  ? 'bg-[#c89968]/15 text-[#3d2e28]'
+                                  : 'bg-[#684e3a]/10 text-[#684e3a]'
+                              }`}>
+                                {new Intl.NumberFormat('pt-BR').format(Number(campaign.resultados || 0))}
                               </span>
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap">

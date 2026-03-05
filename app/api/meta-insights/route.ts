@@ -11,12 +11,14 @@ interface MetaCampaign {
   impressions: number;
   clicks: number;
   leads: number;
+  resultados: number;
   ctr: string;
   cpc: string;
   cpl: string;
   status: string;
   start_time: string;
   stop_time?: string;
+  updated_time?: string;
   teamName: string;
 }
 
@@ -59,7 +61,7 @@ export async function GET() {
     // Fazer requisições simultâneas para todas as contas
     const accountPromises = adAccounts.map(async (account) => {
       // Primeiro buscar as campanhas com insights aninhados
-      const campaignsEndpoint = `https://graph.facebook.com/v19.0/act_${account.id}/campaigns?fields=name,status,start_time,stop_time,insights{spend,impressions,clicks,actions}&date_preset=maximum&access_token=${accessToken}`;
+      const campaignsEndpoint = `https://graph.facebook.com/v19.0/act_${account.id}/campaigns?fields=name,status,start_time,stop_time,updated_time,insights{spend,impressions,clicks,actions}&date_preset=maximum&access_token=${accessToken}`;
 
       try {
         const response = await fetch(campaignsEndpoint);
@@ -71,10 +73,25 @@ export async function GET() {
 
         const data = await response.json();
         
+        const isConversionAction = (actionType: string) => {
+          const normalized = String(actionType || '').toLowerCase();
+          if (!normalized) return false;
+          if (normalized.includes('lead')) return true;
+          if (normalized.includes('contact')) return true;
+          if (normalized.includes('messaging_conversation_started')) return true;
+          return false;
+        };
+
         // Processar os dados e injetar teamName
         const processedData = data.data?.map((campaign: any) => {
           const insights = campaign.insights?.data?.[0] || {};
-          const leads = insights.actions?.find((action: any) => action.action_type === 'lead')?.value || 0;
+          const actions = Array.isArray(insights.actions) ? insights.actions : [];
+          const leads = actions.find((action: any) => action.action_type === 'lead')?.value || 0;
+          const resultados = actions.reduce((sum: number, action: any) => {
+            if (!isConversionAction(action?.action_type)) return sum;
+            const value = Number(action?.value) || 0;
+            return sum + value;
+          }, 0);
           const ctr = insights.impressions > 0 ? ((insights.clicks / insights.impressions) * 100).toFixed(2) : '0.00';
           const cpc = insights.clicks > 0 ? (insights.spend / insights.clicks).toFixed(2) : '0.00';
           const cpl = leads > 0 ? (insights.spend / leads).toFixed(2) : '0.00';
@@ -85,12 +102,14 @@ export async function GET() {
             impressions: insights.impressions || 0,
             clicks: insights.clicks || 0,
             leads: leads,
+            resultados: resultados,
             ctr: ctr,
             cpc: cpc,
             cpl: cpl,
             status: campaign.status || 'UNKNOWN',
             start_time: campaign.start_time,
             stop_time: campaign.stop_time,
+            updated_time: campaign.updated_time,
             teamName: account.name // Injetar o nome da conta
           };
         }) || [];
