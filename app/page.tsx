@@ -86,6 +86,7 @@ interface MetaCampaign {
   ctr: string;
   cpc: string;
   cpl: string;
+  teamName: string;
 }
 
 interface MetaSummary {
@@ -516,6 +517,7 @@ export default function Dashboard() {
                     <thead className="bg-[#FAF9F6] text-[11px] uppercase font-semibold tracking-[0.18em] text-[#684e3a]">
                       <tr>
                         <th className="px-6 py-4">Nome da Campanha</th>
+                        <th className="px-6 py-4">Conta / Operação</th>
                         <th className="px-6 py-4">Valor Gasto</th>
                         <th className="px-6 py-4">Impressões</th>
                         <th className="px-6 py-4">Cliques</th>
@@ -531,6 +533,11 @@ export default function Dashboard() {
                         >
                           <td className="px-6 py-4 font-medium text-[#3d2e28]">
                             {campaign.campaign_name}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[#3d2e28]/10 text-[#3d2e28]">
+                              {campaign.teamName}
+                            </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className="text-sm font-semibold text-[#3d2e28]">
