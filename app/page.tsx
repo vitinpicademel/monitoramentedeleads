@@ -86,6 +86,9 @@ interface MetaCampaign {
   ctr: string;
   cpc: string;
   cpl: string;
+  status: string;
+  start_time: string;
+  stop_time?: string;
   teamName: string;
 }
 
@@ -570,22 +573,25 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <KpiCard
                   title="Investimento Total"
-                  value={`R$ ${metaSummary?.totalSpend || '0'}`}
+                  value={new Intl.NumberFormat('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                  }).format(Number(metaSummary?.totalSpend || 0))}
                   icon={<DollarSign className="h-6 w-6 text-[#c89968]" />}
                 />
                 <KpiCard
                   title="Impressões"
-                  value={metaSummary?.totalImpressions?.toLocaleString('pt-BR') || '0'}
+                  value={new Intl.NumberFormat('pt-BR').format(Number(metaSummary?.totalImpressions || 0))}
                   icon={<Eye className="h-6 w-6 text-[#c89968]" />}
                 />
                 <KpiCard
                   title="Cliques"
-                  value={metaSummary?.totalClicks?.toLocaleString('pt-BR') || '0'}
+                  value={new Intl.NumberFormat('pt-BR').format(Number(metaSummary?.totalClicks || 0))}
                   icon={<MousePointer className="h-6 w-6 text-[#c89968]" />}
                 />
                 <KpiCard
                   title="Leads Gerados"
-                  value={metaSummary?.totalLeads?.toLocaleString('pt-BR') || '0'}
+                  value={new Intl.NumberFormat('pt-BR').format(Number(metaSummary?.totalLeads || 0))}
                   icon={<Target className="h-6 w-6 text-[#c89968]" />}
                 />
               </div>
@@ -606,59 +612,115 @@ export default function Dashboard() {
                   </span>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm text-[#3d2e28]">
-                    <thead className="bg-[#FAF9F6] text-[11px] uppercase font-semibold tracking-[0.18em] text-[#684e3a]">
+                  <table className="w-full text-left text-xs text-[#3d2e28] min-w-[1200px]">
+                    <thead className="bg-[#FAF9F6] text-[10px] uppercase font-semibold tracking-[0.18em] text-[#684e3a]">
                       <tr>
-                        <th className="px-6 py-4">Nome da Campanha</th>
-                        <th className="px-6 py-4">Conta / Operação</th>
-                        <th className="px-6 py-4">Valor Gasto</th>
-                        <th className="px-6 py-4">Impressões</th>
-                        <th className="px-6 py-4">Cliques</th>
-                        <th className="px-6 py-4">CTR (%)</th>
-                        <th className="px-6 py-4">Leads</th>
+                        <th className="px-4 py-3">Nome da Campanha</th>
+                        <th className="px-4 py-3">Status</th>
+                        <th className="px-4 py-3">Início</th>
+                        <th className="px-4 py-3">Fim</th>
+                        <th className="px-4 py-3">Conta / Operação</th>
+                        <th className="px-4 py-3">Valor Gasto</th>
+                        <th className="px-4 py-3">Impressões</th>
+                        <th className="px-4 py-3">Cliques</th>
+                        <th className="px-4 py-3">CTR (%)</th>
+                        <th className="px-4 py-3">Leads</th>
+                        <th className="px-4 py-3">CPL</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#684e3a]/10">
-                      {metaCampaigns.map((campaign, index) => (
-                        <tr
-                          key={index}
-                          className="hover:bg-[#c89968]/5 transition-colors"
-                        >
-                          <td className="px-6 py-4 font-medium text-[#3d2e28]">
-                            {campaign.campaign_name}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[#3d2e28]/10 text-[#3d2e28]">
-                              {campaign.teamName}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm font-semibold text-[#3d2e28]">
-                              R$ {parseFloat(campaign.spend).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-[#3d2e28]">
-                            {campaign.impressions.toLocaleString('pt-BR')}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-[#3d2e28]">
-                            {campaign.clicks.toLocaleString('pt-BR')}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[#c89968]/15 text-[#3d2e28]">
-                              {campaign.ctr}%
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide ${
-                              campaign.leads > 0 
-                                ? 'bg-[#3d2e28]/10 text-[#3d2e28]'
-                                : 'bg-[#684e3a]/10 text-[#684e3a]'
-                            }`}>
-                              {campaign.leads.toLocaleString('pt-BR')}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
+                      {metaCampaigns.map((campaign, index) => {
+                        const cplValue = campaign.leads > 0 ? Number(campaign.spend) / campaign.leads : 0;
+                        const formatDate = (dateString?: string) => {
+                          if (!dateString) return '--';
+                          return new Date(dateString).toLocaleDateString('pt-BR');
+                        };
+                        
+                        const getStatusBadge = (status: string) => {
+                          const statusLower = status.toLowerCase();
+                          if (statusLower === 'active' || statusLower === 'ativa') {
+                            return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+                          } else if (statusLower === 'paused' || statusLower === 'pausada') {
+                            return 'bg-slate-100 text-slate-700 border-slate-200';
+                          } else if (statusLower === 'archived' || statusLower === 'arquivada') {
+                            return 'bg-amber-100 text-amber-700 border-amber-200';
+                          }
+                          return 'bg-gray-100 text-gray-700 border-gray-200';
+                        };
+
+                        return (
+                          <tr
+                            key={index}
+                            className="hover:bg-[#c89968]/5 transition-colors"
+                          >
+                            <td className="px-4 py-3 font-medium text-[#3d2e28] max-w-[200px] truncate">
+                              <span title={campaign.campaign_name}>
+                                {campaign.campaign_name}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold border ${getStatusBadge(campaign.status)}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full mr-1 ${
+                                  campaign.status.toLowerCase() === 'active' ? 'bg-emerald-500' :
+                                  campaign.status.toLowerCase() === 'paused' ? 'bg-slate-500' :
+                                  'bg-gray-500'
+                                }`}></span>
+                                {campaign.status === 'active' ? 'Ativa' : 
+                                 campaign.status === 'paused' ? 'Pausada' :
+                                 campaign.status === 'archived' ? 'Arquivada' :
+                                 campaign.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-xs text-[#3d2e28] whitespace-nowrap">
+                              {formatDate(campaign.start_time)}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-[#3d2e28] whitespace-nowrap">
+                              {formatDate(campaign.stop_time)}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold tracking-wide bg-[#3d2e28]/10 text-[#3d2e28]">
+                                {campaign.teamName}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <span className="text-xs font-semibold text-[#3d2e28]">
+                                {new Intl.NumberFormat('pt-BR', {
+                                  style: 'currency',
+                                  currency: 'BRL'
+                                }).format(Number(campaign.spend))}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-xs text-[#3d2e28]">
+                              {new Intl.NumberFormat('pt-BR').format(Number(campaign.impressions))}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-[#3d2e28]">
+                              {new Intl.NumberFormat('pt-BR').format(Number(campaign.clicks))}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold tracking-wide bg-[#c89968]/15 text-[#3d2e28]">
+                                {campaign.ctr}%
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold tracking-wide ${
+                                campaign.leads > 0 
+                                  ? 'bg-[#3d2e28]/10 text-[#3d2e28]'
+                                  : 'bg-[#684e3a]/10 text-[#684e3a]'
+                              }`}>
+                                {new Intl.NumberFormat('pt-BR').format(Number(campaign.leads))}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <span className="text-xs font-semibold text-[#3d2e28]">
+                                {new Intl.NumberFormat('pt-BR', {
+                                  style: 'currency',
+                                  currency: 'BRL'
+                                }).format(cplValue)}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -810,11 +872,13 @@ export default function Dashboard() {
 function KpiCard({ title, value, icon }: { title: string, value: string | number, icon: React.ReactNode }) {
   return (
     <div className="bg-white/95 p-6 rounded-2xl border border-[#684e3a]/20 flex items-start justify-between transition-all duration-200 hover:-translate-y-0.5 hover:border-[#c89968] hover:shadow-md">
-      <div>
-        <p className="text-xs font-medium tracking-wide text-[#684e3a] mb-1 uppercase">{title}</p>
-        <h4 className="text-2xl font-semibold text-[#3d2e28]">{value}</h4>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-medium tracking-wide text-[#684e3a] mb-1 uppercase truncate">{title}</p>
+        <h4 className="text-xl font-semibold text-[#3d2e28] truncate" style={{ fontSize: 'clamp(1rem, 2.5vw, 1.25rem)' }}>
+          {value}
+        </h4>
       </div>
-      <div className="p-3 rounded-full bg-[#FAF9F6] border border-[#684e3a]/20">
+      <div className="p-3 rounded-full bg-[#FAF9F6] border border-[#684e3a]/20 ml-3 flex-shrink-0">
         {icon}
       </div>
     </div>

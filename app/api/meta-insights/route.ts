@@ -14,6 +14,9 @@ interface MetaCampaign {
   ctr: string;
   cpc: string;
   cpl: string;
+  status: string;
+  start_time: string;
+  stop_time?: string;
   teamName: string;
 }
 
@@ -55,10 +58,11 @@ export async function GET() {
 
     // Fazer requisições simultâneas para todas as contas
     const accountPromises = adAccounts.map(async (account) => {
-      const endpoint = `https://graph.facebook.com/v19.0/act_${account.id}/insights?fields=campaign_name,spend,impressions,clicks,actions&date_preset=maximum&access_token=${accessToken}`;
+      // Primeiro buscar as campanhas com insights aninhados
+      const campaignsEndpoint = `https://graph.facebook.com/v19.0/act_${account.id}/campaigns?fields=name,status,start_time,stop_time,insights{spend,impressions,clicks,actions}&date_preset=maximum&access_token=${accessToken}`;
 
       try {
-        const response = await fetch(endpoint);
+        const response = await fetch(campaignsEndpoint);
         
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
@@ -69,20 +73,24 @@ export async function GET() {
         
         // Processar os dados e injetar teamName
         const processedData = data.data?.map((campaign: any) => {
-          const leads = campaign.actions?.find((action: any) => action.action_type === 'lead')?.value || 0;
-          const ctr = campaign.impressions > 0 ? ((campaign.clicks / campaign.impressions) * 100).toFixed(2) : '0.00';
-          const cpc = campaign.clicks > 0 ? (campaign.spend / campaign.clicks).toFixed(2) : '0.00';
-          const cpl = leads > 0 ? (campaign.spend / leads).toFixed(2) : '0.00';
+          const insights = campaign.insights?.data?.[0] || {};
+          const leads = insights.actions?.find((action: any) => action.action_type === 'lead')?.value || 0;
+          const ctr = insights.impressions > 0 ? ((insights.clicks / insights.impressions) * 100).toFixed(2) : '0.00';
+          const cpc = insights.clicks > 0 ? (insights.spend / insights.clicks).toFixed(2) : '0.00';
+          const cpl = leads > 0 ? (insights.spend / leads).toFixed(2) : '0.00';
 
           return {
-            campaign_name: campaign.campaign_name,
-            spend: parseFloat(campaign.spend).toFixed(2),
-            impressions: campaign.impressions,
-            clicks: campaign.clicks,
+            campaign_name: campaign.name,
+            spend: parseFloat(insights.spend || 0).toFixed(2),
+            impressions: insights.impressions || 0,
+            clicks: insights.clicks || 0,
             leads: leads,
             ctr: ctr,
             cpc: cpc,
             cpl: cpl,
+            status: campaign.status || 'UNKNOWN',
+            start_time: campaign.start_time,
+            stop_time: campaign.stop_time,
             teamName: account.name // Injetar o nome da conta
           };
         }) || [];
@@ -102,10 +110,10 @@ export async function GET() {
 
     // Calcular totais globais
     const totals = mergedData.reduce((acc: any, campaign: MetaCampaign) => {
-      acc.totalSpend += parseFloat(campaign.spend);
-      acc.totalImpressions += campaign.impressions;
-      acc.totalClicks += campaign.clicks;
-      acc.totalLeads += campaign.leads;
+      acc.totalSpend += Number(campaign.spend);
+      acc.totalImpressions += Number(campaign.impressions);
+      acc.totalClicks += Number(campaign.clicks);
+      acc.totalLeads += Number(campaign.leads);
       return acc;
     }, {
       totalSpend: 0,
