@@ -77,6 +77,7 @@ interface KPI {
   atendimento: number;
 }
 
+<<<<<<< HEAD
 interface MetaCampaign {
   campaign_name: string;
   spend: string;
@@ -98,6 +99,8 @@ interface MetaSummary {
   avgCpl: string;
 }
 
+=======
+>>>>>>> a42a9ac312fb49c78fdc05f0c5f9e57011bfd8da
 // --- Mock Data Fallback (ONLY for initial structure dev, replaced by API error in prod) ---
 // User requested NO Mock Data if API fails. 
 // So we start with empty state and show error if fetch fails.
@@ -105,12 +108,19 @@ interface MetaSummary {
 export default function Dashboard() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [leadsAll, setLeadsAll] = useState<Lead[]>([]);
+<<<<<<< HEAD
   const [metaCampaigns, setMetaCampaigns] = useState<MetaCampaign[]>([]);
   const [metaSummary, setMetaSummary] = useState<MetaSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<string>('Todos');
   const [dataMode, setDataMode] = useState<'atendimentos' | 'geral' | 'meta-ads'>('atendimentos');
+=======
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<string>('Todos');
+  const [dataMode, setDataMode] = useState<'atendimentos' | 'geral'>('atendimentos');
+>>>>>>> a42a9ac312fb49c78fdc05f0c5f9e57011bfd8da
 
   // Fetch Data
   const fetchLeads = async () => {
@@ -158,12 +168,17 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
+<<<<<<< HEAD
     if (dataMode === 'meta-ads') {
       if (metaCampaigns.length === 0) fetchMetaAds();
     } else {
       fetchLeads();
     }
   }, [dataMode]);
+=======
+    fetchLeads();
+  }, []);
+>>>>>>> a42a9ac312fb49c78fdc05f0c5f9e57011bfd8da
  
   const fetchLeadsAll = async () => {
     setLoading(true);
@@ -198,6 +213,7 @@ export default function Dashboard() {
     }
   };
 
+<<<<<<< HEAD
   const fetchMetaAds = async () => {
     setLoading(true);
     setError(null);
@@ -219,6 +235,8 @@ export default function Dashboard() {
     }
   };
 
+=======
+>>>>>>> a42a9ac312fb49c78fdc05f0c5f9e57011bfd8da
   // --- Process Data ---
 
   const currentLeads = dataMode === 'geral' ? leadsAll : leads;
@@ -377,7 +395,11 @@ export default function Dashboard() {
               Relatórios
             </Link>
             <button
+<<<<<<< HEAD
               onClick={() => dataMode === 'meta-ads' ? fetchMetaAds() : fetchLeads()}
+=======
+              onClick={fetchLeads}
+>>>>>>> a42a9ac312fb49c78fdc05f0c5f9e57011bfd8da
               className="inline-flex items-center justify-center h-9 w-9 rounded-full border border-[#c89968]/40 hover:bg-[#c89968]/15 text-[#3d2e28] transition-colors"
               title="Atualizar"
             >
@@ -414,6 +436,7 @@ export default function Dashboard() {
             >
               Leads gerais
             </button>
+<<<<<<< HEAD
             <button
               onClick={() => { setDataMode('meta-ads'); }}
               className={`px-3 py-1.5 rounded-full text-xs font-medium tracking-wide transition-all ${
@@ -439,61 +462,6 @@ export default function Dashboard() {
             </button>
           ))}
         </div>
-
-        <section>
-          {dataMode === 'meta-ads' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <KpiCard
-                title="Valor Gasto (R$)"
-                value={metaSummary?.totalSpend || '0.00'}
-                icon={<DollarSign className="h-5 w-5 text-[#c89968]" />}
-              />
-              <KpiCard
-                title="Total de Impressões"
-                value={metaSummary?.totalImpressions.toLocaleString('pt-BR') || '0'}
-                icon={<Eye className="h-5 w-5 text-[#c89968]" />}
-              />
-              <KpiCard
-                title="Total de Cliques"
-                value={metaSummary?.totalClicks.toLocaleString('pt-BR') || '0'}
-                icon={<MousePointer className="h-5 w-5 text-[#c89968]" />}
-              />
-              <KpiCard
-                title="Custo por Clique (R$)"
-                value={metaSummary?.avgCpc || '0.00'}
-                icon={<Target className="h-5 w-5 text-[#c89968]" />}
-              />
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-              <KpiCard
-                title="Total Leads Hoje"
-                value={kpis.totalLeads}
-                icon={<Users className="h-5 w-5 text-[#c89968]" />}
-              />
-              <KpiCard
-                title="Visitas Agendadas"
-                value={kpis.agendamentos}
-                icon={<Calendar className="h-5 w-5 text-[#c89968]" />}
-              />
-              <KpiCard
-                title="Taxa de Conversão"
-                value={kpis.conversao}
-                icon={<TrendingUp className="h-5 w-5 text-[#c89968]" />}
-              />
-              <KpiCard
-                title="Em Atendimento"
-                value={kpis.atendimento}
-                icon={<MessageCircle className="h-5 w-5 text-[#c89968]" />}
-              />
-              <KpiCard
-                title="Pendentes (Sem Atendimento)"
-                value={kpis.pendentes}
-                icon={<Clock className="h-5 w-5 text-[#c89968]" />}
-              />
-            </div>
-          )}
-        </section>
 
         <section>
           {dataMode === 'meta-ads' ? (
@@ -796,9 +764,13 @@ export default function Dashboard() {
             )}
           </div>
         </section>
+<<<<<<< HEAD
         )}
 
         {dataMode !== 'meta-ads' && (
+=======
+
+>>>>>>> a42a9ac312fb49c78fdc05f0c5f9e57011bfd8da
         <section>
           <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 overflow-hidden">
             <div className="p-6 border-b border-[#684e3a]/15 flex justify-between items-center">
