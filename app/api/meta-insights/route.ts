@@ -20,8 +20,11 @@ interface MetaCampaign {
   teamName: string;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const datePreset = searchParams.get('date_preset') || 'last_30d';
+    
     const accessToken = process.env.META_ACCESS_TOKEN;
     const adAccountsEnv = process.env.META_AD_ACCOUNTS;
 
@@ -58,7 +61,7 @@ export async function GET() {
 
     // Fazer requisições simultâneas para todas as contas buscando campanhas individuais
     const accountPromises = adAccounts.map(async (account) => {
-      const endpoint = `https://graph.facebook.com/v19.0/act_${account.id}/campaigns?fields=name,status,start_time,stop_time,insights{spend,impressions,clicks,actions}&date_preset=maximum&access_token=${accessToken}`;
+      const endpoint = `https://graph.facebook.com/v19.0/act_${account.id}/campaigns?fields=name,status,start_time,stop_time,insights{spend,impressions,clicks,actions}&date_preset=${datePreset}&access_token=${accessToken}`;
       
       try {
         const response = await fetch(endpoint);

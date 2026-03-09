@@ -119,6 +119,7 @@ export default function Dashboard() {
   // Estados para filtros da tabela Meta Ads
   const [selectedAccount, setSelectedAccount] = useState<string>('Todas as Contas');
   const [selectedStatus, setSelectedStatus] = useState<string>('Todos os Status');
+  const [datePreset, setDatePreset] = useState<string>('last_30d');
 
   // Fetch Data
   const fetchLeads = async () => {
@@ -173,11 +174,17 @@ export default function Dashboard() {
     }
   }, [viewMode]);
 
+  useEffect(() => {
+    if (viewMode === 'meta-ads' && datePreset) {
+      fetchMetaAds();
+    }
+  }, [datePreset]);
+
   const fetchMetaAds = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/meta-insights');
+      const res = await fetch(`/api/meta-insights?date_preset=${datePreset}`);
       if (!res.ok) {
         const errData = await res.json();
         throw new Error(errData.error || `Erro ${res.status}`);
@@ -706,6 +713,23 @@ export default function Dashboard() {
                         <option value="Todos os Status">Todos os Status</option>
                         <option value="Ativas">Ativas</option>
                         <option value="Pausadas">Pausadas</option>
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col">
+                      <label className="text-xs font-medium text-[#684e3a] mb-1 uppercase tracking-wide">PERÍODO</label>
+                      <select
+                        value={datePreset}
+                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setDatePreset(e.target.value)}
+                        className="px-3 py-2 text-sm border border-[#684e3a]/30 rounded-lg bg-white text-[#3d2e28] focus:outline-none focus:ring-2 focus:ring-[#c89968]/50 focus:border-[#c89968]"
+                      >
+                        <option value="today">Hoje</option>
+                        <option value="yesterday">Ontem</option>
+                        <option value="last_7d">Últimos 7 dias</option>
+                        <option value="last_30d">Últimos 30 dias</option>
+                        <option value="this_month">Este mês</option>
+                        <option value="last_month">Mês passado</option>
+                        <option value="maximum">Vitalício</option>
                       </select>
                     </div>
                   </div>
