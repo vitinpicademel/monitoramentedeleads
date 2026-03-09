@@ -653,6 +653,33 @@ export default function Dashboard() {
         </div>
         )}
 
+        {/* DEBUG VISUAL COMPLETO - Análise de Dados */}
+        {viewMode === 'operacional' && leads.length > 0 && (
+          <div className="w-full p-4 mb-4 bg-gray-900 text-green-400 font-mono text-xs overflow-auto max-h-96 rounded border border-green-500">
+            <p className="text-white mb-2">🔍 DEBUG COMPLETO - Estrutura do Lead + Análise de Campos:</p>
+            <pre>{JSON.stringify({
+              lead_completo: leads[0],
+              campos_disponiveis: Object.keys(leads[0] || {}),
+              campos_aninhados: (leads[0] as any)?._raw ? Object.keys((leads[0] as any)._raw) : [],
+              analise_status: {
+                status_atual: leads[0]?.status,
+                contem_visita: leads[0]?.status?.toLowerCase().includes('visita'),
+                contem_venda: leads[0]?.status?.toLowerCase().includes('venda') || leads[0]?.status?.toLowerCase().includes('realizado'),
+                contem_negocio: leads[0]?.status?.toLowerCase().includes('negócio'),
+                data_entrada: leads[0]?.data_entrada,
+                primeira_interacao: leads[0]?.primeira_interacao
+              },
+              campos_midia: {
+                origem: leads[0]?.origem,
+                midia: leads[0]?.midia,
+                _raw_origem: (leads[0] as any)?._raw?.origem,
+                _raw_midia: (leads[0] as any)?._raw?.midia,
+                _raw_campanha: (leads[0] as any)?._raw?.campanha
+              }
+            }, null, 2)}</pre>
+          </div>
+        )}
+
         {/* Filtro de Mídia - Apenas para Visão Operacional */}
         {viewMode === 'operacional' && uniqueMedias.length > 0 && (
         <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 p-4">
