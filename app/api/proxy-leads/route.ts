@@ -18,13 +18,13 @@ export async function GET(request: Request) {
   const fetchPage = async (finalidade: number, page: number) => {
     const params = new URLSearchParams({
       numeroPagina: page.toString(),
-      numeroRegistros: '50', // 50 registros por página
+      numeroRegistros: '20', // Limite do Imoview: máximo 20 registros por página
       finalidade: finalidade.toString(),
       situacao: '0' // 0 para todos
     });
 
     try {
-      console.log(`Buscando página ${page} para finalidade ${finalidade}...`);
+      console.log(`Buscando página ${page} para finalidade ${finalidade} (20 registros)...`);
       
       const res = await fetch(`${BASE_URL}/Atendimento/RetornarAtendimentos?${params.toString()}`, {
         headers: {
@@ -64,29 +64,27 @@ export async function GET(request: Request) {
   };
 
   try {
-    console.log('Iniciando busca simples de leads (páginas 1, 2, 3)...');
+    console.log('Iniciando busca ajustada de leads (páginas 1-10, 20 regs cada)...');
     
-    // Buscar páginas 1, 2, 3 para ambas as finalidades simultaneamente
+    // Buscar páginas 1-10 para ambas as finalidades simultaneamente (20 páginas × 20 = 400 leads máximos)
     const promises = [
-      fetchPage(1, 1), // Aluguel página 1
-      fetchPage(1, 2), // Aluguel página 2  
-      fetchPage(1, 3), // Aluguel página 3
-      fetchPage(2, 1), // Venda página 1
-      fetchPage(2, 2), // Venda página 2
-      fetchPage(2, 3), // Venda página 3
+      fetchPage(1, 1), fetchPage(1, 2), fetchPage(1, 3), fetchPage(1, 4), fetchPage(1, 5), // Aluguel páginas 1-5
+      fetchPage(1, 6), fetchPage(1, 7), fetchPage(1, 8), fetchPage(1, 9), fetchPage(1, 10), // Aluguel páginas 6-10
+      fetchPage(2, 1), fetchPage(2, 2), fetchPage(2, 3), fetchPage(2, 4), fetchPage(2, 5), // Venda páginas 1-5
+      fetchPage(2, 6), fetchPage(2, 7), fetchPage(2, 8), fetchPage(2, 9), fetchPage(2, 10), // Venda páginas 6-10
     ];
 
     const results = await Promise.all(promises);
     
     // Combinar todos os resultados
     const allLeads = results.flat();
-    console.log(`Total de ${allLeads.length} leads coletados das 6 páginas`);
+    console.log(`Total de ${allLeads.length} leads coletados das 20 páginas (respeitando limite de 20/página)`);
 
     // Se não conseguiu nenhum lead, retornar erro para debug
     if (allLeads.length === 0) {
       console.log('Nenhum lead encontrado, retornando erro para debug');
       return NextResponse.json(
-        { error: 'Nenhum lead encontrado nas páginas 1-3. Verificar se há dados recentes ou se a API está funcionando.' },
+        { error: 'Nenhum lead encontrado nas páginas 1-10. Verificar se há dados recentes ou se a API está funcionando.' },
         { status: 404 }
       );
     }
