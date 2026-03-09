@@ -653,14 +653,6 @@ export default function Dashboard() {
         </div>
         )}
 
-        {/* DEBUG VISUAL - Estrutura do Imoview */}
-        {viewMode === 'operacional' && leads.length > 0 && (
-          <div className="w-full p-4 mb-4 bg-gray-900 text-green-400 font-mono text-xs overflow-auto max-h-96 rounded border border-green-500">
-            <p className="text-white mb-2">DEBUG DO IMOVIEW (Me envie print desta caixa):</p>
-            <pre>{JSON.stringify(leads[0], null, 2)}</pre>
-          </div>
-        )}
-
         {/* Filtro de Mídia - Apenas para Visão Operacional */}
         {viewMode === 'operacional' && uniqueMedias.length > 0 && (
         <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 p-4">
