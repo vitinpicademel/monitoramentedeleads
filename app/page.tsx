@@ -5,8 +5,6 @@ import Link from 'next/link';
 import {
   LayoutDashboard,
   Users,
-  Calendar,
-  TrendingUp,
   MessageCircle,
   AlertCircle,
   Clock,
@@ -18,7 +16,9 @@ import {
   DollarSign,
   Eye,
   MousePointer,
-  Target
+  Target,
+  Calendar,
+  TrendingUp
 } from 'lucide-react';
 import {
   LineChart,
@@ -984,6 +984,74 @@ export default function Dashboard() {
         {/* Tabela de Detalhamento de Leads - Apenas para Visão Operacional */}
         {viewMode === 'operacional' && (
         <section>
+          {/* Resumo de Conversão por Campanha */}
+          <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 p-6 mb-6">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+              <div>
+                <h3 className="text-sm sm:text-base font-semibold tracking-wide text-[#3d2e28] uppercase mb-2">
+                  Resumo de Conversão por Campanha
+                </h3>
+                <p className="text-xs text-[#684e3a] tracking-wide">
+                  Análise de performance por origem/campanha
+                </p>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <div className="flex flex-col">
+                  <label className="text-xs font-medium text-[#684e3a] mb-1 uppercase tracking-wide">Filtrar por Campanha/Origem</label>
+                  <select
+                    value={selectedMedia}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedMedia(e.target.value)}
+                    className="px-3 py-2 text-sm border border-[#684e3a]/30 rounded-lg bg-white text-[#3d2e28] focus:outline-none focus:ring-2 focus:ring-[#c89968]/50 focus:border-[#c89968] min-w-[200px]"
+                  >
+                    <option value="Todas as Mídias">Todas as Campanhas</option>
+                    {uniqueMedias.map((media: string) => (
+                      <option key={media} value={media}>
+                        {media}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            {/* Indicadores do Funil */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+              <div className="bg-[#FAF9F6] rounded-xl p-4 border border-[#684e3a]/10">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-[#684e3a] uppercase tracking-wide">Total de Leads</span>
+                  <Users size={16} className="text-[#c89968]" />
+                </div>
+                <div className="text-2xl font-bold text-[#3d2e28]">{mediaFunnelStats.totalLeads}</div>
+              </div>
+              
+              <div className="bg-[#FAF9F6] rounded-xl p-4 border border-[#684e3a]/10">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-[#684e3a] uppercase tracking-wide">Visitas</span>
+                  <Calendar size={16} className="text-[#c89968]" />
+                </div>
+                <div className="text-2xl font-bold text-[#c89968]">{mediaFunnelStats.visitas}</div>
+              </div>
+              
+              <div className="bg-[#FAF9F6] rounded-xl p-4 border border-[#684e3a]/10">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-[#684e3a] uppercase tracking-wide">Vendas/Negócios</span>
+                  <TrendingUp size={16} className="text-[#c89968]" />
+                </div>
+                <div className="text-2xl font-bold text-[#3d2e28]">{mediaFunnelStats.negocios}</div>
+              </div>
+            </div>
+            
+            {selectedMedia !== 'Todas as Mídias' && (
+              <div className="mt-4 pt-4 border-t border-[#684e3a]/20">
+                <div className="flex items-center gap-2 text-xs text-[#684e3a]">
+                  <Target size={14} />
+                  <span>Mostrando resultados para: <strong>{selectedMedia}</strong></span>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 overflow-hidden">
             <div className="p-6 border-b border-[#684e3a]/15 flex justify-between items-center">
               <div>
@@ -1007,6 +1075,7 @@ export default function Dashboard() {
                       <th className="px-6 py-4">Nome</th>
                       <th className="px-6 py-4">Contato</th>
                       <th className="px-6 py-4">Email</th>
+                      <th className="px-6 py-4">ORIGEM / CAMPANHA</th>
                       <th className="px-6 py-4">Status</th>
                       <th className="px-6 py-4">Time</th>
                       <th className="px-6 py-4">SLA (Espera)</th>
@@ -1054,6 +1123,17 @@ export default function Dashboard() {
                                 {lead.email || '--'}
                               </span>
                               {lead.email && <CopyAction value={lead.email} />}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 max-w-[200px]">
+                            <div className="flex flex-col items-start">
+                              <span
+                                className="text-sm font-medium text-[#3d2e28] truncate w-full"
+                                title={lead.midia}
+                              >
+                                {lead.midia || 'Desconhecida'}
+                              </span>
+                              <CopyAction value={lead.midia || 'Desconhecida'} />
                             </div>
                           </td>
                           <td className="px-6 py-4">

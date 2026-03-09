@@ -85,7 +85,7 @@ export async function GET(request: Request) {
     const mappedLeads = rawLeads.map((item: any) => {
       // Debug: mostrar estrutura do primeiro lead para identificar campos corretos
       if (rawLeads.indexOf(item) === 0) {
-        console.log('Estrutura completa do lead Imoview:', JSON.stringify(item, null, 2));
+        console.log('Lead 0 Imoview:', JSON.stringify(item, null, 2));
       }
       
       return {
@@ -97,8 +97,8 @@ export async function GET(request: Request) {
         time: item.unidadenome || 'Geral',
         data_entrada: parseImoviewDate(item.datahoraentradalead) || new Date().toISOString(),
         primeira_interacao: parseImoviewDate(item.datahoraultimainteracao) || null,
-        midia: item.midia || item.origem || item.utm_campaign || 'Site', // Campo principal para filtragem
-        origem: item.midia || item.origem || item.utm_campaign || 'Site', // Manter compatibilidade
+        midia: item.midia || item.origem || item.campanha || item.utm_campaign || item.campaign || 'Desconhecida', // Fallback robusto
+        origem: item.midia || item.origem || item.campanha || item.utm_campaign || item.campaign || 'Desconhecida', // Manter compatibilidade
         _raw: item
       };
     });
