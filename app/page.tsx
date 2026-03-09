@@ -304,6 +304,62 @@ export default function Dashboard() {
     };
   }, [currentLeads, selectedMedia]);
 
+  // Ranking Analítico por Campanha
+  const campaignRanking = useMemo(() => {
+    // Agrupar leads por origem/campanha
+    const grouped = currentLeads.reduce((acc: Record<string, { totalLeads: number; visitas: number; vendas: number }>, lead: Lead) => {
+      const campaign = lead.midia || 'Desconhecida';
+      
+      if (!acc[campaign]) {
+        acc[campaign] = {
+          totalLeads: 0,
+          visitas: 0,
+          vendas: 0
+        };
+      }
+      
+      acc[campaign].totalLeads++;
+      
+      // Verificar se é visita
+      if (lead.status?.toLowerCase().includes('visita') || 
+          lead.status?.toLowerCase().includes('agendamento') ||
+          lead.status?.toLowerCase().includes('visiting')) {
+        acc[campaign].visitas++;
+      }
+      
+      // Verificar se é venda/negócio fechado
+      if (lead.status?.toLowerCase().includes('negócio') || 
+          lead.status?.toLowerCase().includes('realizado') ||
+          lead.status?.toLowerCase().includes('vendido') ||
+          lead.status?.toLowerCase().includes('alugado') ||
+          lead.status?.toLowerCase().includes('ganho') ||
+          lead.status?.toLowerCase().includes('fechado')) {
+        acc[campaign].vendas++;
+      }
+      
+      return acc;
+    }, {});
+
+    // Transformar em array e ordenar por performance (vendas > visitas > leads)
+    return Object.entries(grouped)
+      .map(([campaign, stats]) => ({
+        campaign,
+        ...stats
+      }))
+      .sort((a, b) => {
+        // 1) Priorizar vendas
+        if (b.vendas !== a.vendas) {
+          return b.vendas - a.vendas;
+        }
+        // 2) Se empate em vendas, priorizar visitas
+        if (b.visitas !== a.visitas) {
+          return b.visitas - a.visitas;
+        }
+        // 3) Se empate em visitas, priorizar leads
+        return b.totalLeads - a.totalLeads;
+      });
+  }, [currentLeads]);
+
   // Lógica de ordenação e filtragem para Meta Ads
   const sortedAndFilteredCampaigns = useMemo(() => {
     let filtered = metaCampaigns;
@@ -597,60 +653,127 @@ export default function Dashboard() {
         </div>
         )}
 
-        {/* Filtro de Mídia - Apenas para Visão Operacional */}
-        {viewMode === 'operacional' && uniqueMedias.length > 0 && (
-        <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 p-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="flex items-center gap-2 text-xs sm:text-sm tracking-wide uppercase text-[#684e3a]">
-              <Target size={16} />
-              <span className="font-medium">Filtrar por Mídia/Campanha</span>
+        {/* Ranking Analítico por Campanha - Apenas para Visão Operacional */}
+        {viewMode === 'operacional' && campaignRanking.length > 0 && (
+        <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-sm sm:text-base font-semibold tracking-wide text-[#3d2e28] uppercase">
+                Ranking de Campanhas
+              </h3>
+              <p className="text-xs text-[#684e3a] mt-1 tracking-wide">
+                Performance por Origem/Campanha (ordenado por vendas)
+              </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setSelectedMedia('Todas as Mídias')}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium tracking-wide transition-all ${
-                  selectedMedia === 'Todas as Mídias'
-                    ? 'bg-[#c89968] text-[#FAF9F6] shadow-sm'
-                    : 'bg-white/90 text-[#3d2e28] border border-[#684e3a]/30 hover:border-[#c89968]'
-                }`}
-              >
-                Todas as Mídias
-              </button>
-              {uniqueMedias.map((media: string) => (
-                <button
-                  key={media}
-                  onClick={() => setSelectedMedia(media)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium tracking-wide transition-all ${
-                    selectedMedia === media
-                      ? 'bg-[#c89968] text-[#FAF9F6] shadow-sm'
-                      : 'bg-white/90 text-[#3d2e28] border border-[#684e3a]/30 hover:border-[#c89968]'
-                  }`}
-                >
-                  {media}
-                </button>
-              ))}
+            <div className="flex items-center gap-2">
+              <TrendingUp size={18} className="text-[#c89968]" />
+              <span className="text-xs text-[#684e3a] font-medium">
+                {campaignRanking.length} campanhas
+              </span>
             </div>
           </div>
-          
-          {/* Indicadores de Funil */}
-          {selectedMedia !== 'Todas as Mídias' && (
-            <div className="mt-4 pt-4 border-t border-[#684e3a]/20">
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div className="bg-[#FAF9F6] rounded-lg p-3">
-                  <div className="text-2xl font-bold text-[#3d2e28]">{mediaFunnelStats.totalLeads}</div>
-                  <div className="text-xs text-[#684e3a] uppercase tracking-wide">Total Leads</div>
+
+          {/* Tabela de Ranking */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-[#3d2e28]">
+              <thead className="bg-[#FAF9F6] text-[11px] uppercase font-semibold tracking-[0.18em] text-[#684e3a]">
+                <tr>
+                  <th className="px-4 py-3 text-left">Origem / Campanha</th>
+                  <th className="px-4 py-3 text-center">Leads Gerados</th>
+                  <th className="px-4 py-3 text-center">Visitas (SLA)</th>
+                  <th className="px-4 py-3 text-center">Vendas Fechadas</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#684e3a]/10">
+                {campaignRanking.map((item, index) => (
+                  <tr 
+                    key={item.campaign}
+                    className={`hover:bg-[#c89968]/5 transition-colors ${
+                      index === 0 ? 'bg-[#c89968]/10' : '' // Destaque para #1
+                    }`}
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        {index === 0 && (
+                          <div className="h-6 w-6 rounded-full bg-[#c89968] text-white text-xs font-bold flex items-center justify-center">
+                            1
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-medium text-[#3d2e28] truncate max-w-[200px]" title={item.campaign}>
+                            {item.campaign}
+                          </div>
+                          {item.vendas > 0 && (
+                            <div className="text-xs text-green-600 font-medium">
+                              🏆 Top Performer
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold ${
+                        item.totalLeads > 0 
+                          ? 'bg-[#3d2e28]/10 text-[#3d2e28]' 
+                          : 'bg-[#684e3a]/10 text-[#684e3a]'
+                      }`}>
+                        {new Intl.NumberFormat('pt-BR').format(item.totalLeads)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold ${
+                        item.visitas > 0 
+                          ? 'bg-[#c89968]/15 text-[#c89968]' 
+                          : 'bg-[#684e3a]/10 text-[#684e3a]'
+                      }`}>
+                        {new Intl.NumberFormat('pt-BR').format(item.visitas)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold ${
+                        item.vendas > 0 
+                          ? 'bg-green-100 text-green-800 border border-green-200' 
+                          : 'bg-[#684e3a]/10 text-[#684e3a]'
+                      }`}>
+                        {new Intl.NumberFormat('pt-BR').format(item.vendas)}
+                        {item.vendas > 0 && (
+                          <span className="ml-1">💰</span>
+                        )}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Resumo Geral */}
+          <div className="mt-6 pt-4 border-t border-[#684e3a]/20">
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="bg-[#FAF9F6] rounded-lg p-3">
+                <div className="text-lg font-bold text-[#3d2e28]">
+                  {new Intl.NumberFormat('pt-BR').format(currentLeads.length)}
                 </div>
-                <div className="bg-[#FAF9F6] rounded-lg p-3">
-                  <div className="text-2xl font-bold text-[#c89968]">{mediaFunnelStats.visitas}</div>
-                  <div className="text-xs text-[#684e3a] uppercase tracking-wide">Visitas</div>
+                <div className="text-xs text-[#684e3a] uppercase tracking-wide">Total Leads</div>
+              </div>
+              <div className="bg-[#FAF9F6] rounded-lg p-3">
+                <div className="text-lg font-bold text-[#c89968]">
+                  {new Intl.NumberFormat('pt-BR').format(
+                    campaignRanking.reduce((sum, item) => sum + item.visitas, 0)
+                  )}
                 </div>
-                <div className="bg-[#FAF9F6] rounded-lg p-3">
-                  <div className="text-2xl font-bold text-[#3d2e28]">{mediaFunnelStats.negocios}</div>
-                  <div className="text-xs text-[#684e3a] uppercase tracking-wide">Negócios</div>
+                <div className="text-xs text-[#684e3a] uppercase tracking-wide">Total Visitas</div>
+              </div>
+              <div className="bg-[#FAF9F6] rounded-lg p-3">
+                <div className="text-lg font-bold text-green-600">
+                  {new Intl.NumberFormat('pt-BR').format(
+                    campaignRanking.reduce((sum, item) => sum + item.vendas, 0)
+                  )}
                 </div>
+                <div className="text-xs text-[#684e3a] uppercase tracking-wide">Total Vendas</div>
               </div>
             </div>
-          )}
+          </div>
         </div>
         )}
 
