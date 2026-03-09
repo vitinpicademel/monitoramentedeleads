@@ -1059,22 +1059,6 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* DEBUG VISUAL - Estrutura do Primeiro Lead */}
-          {leads.length > 0 && (
-            <div className="bg-red-50 border-2 border-red-300 rounded-2xl p-4 mb-6">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="h-3 w-3 rounded-full bg-red-500 animate-pulse"></div>
-                <h4 className="text-sm font-bold text-red-800 uppercase tracking-wide">DEBUG - Estrutura do Primeiro Lead</h4>
-              </div>
-              <p className="text-xs text-red-600 mb-3">Cliente: Por favor, me informe qual chave contém a origem/campanha do lead</p>
-              <div className="bg-gray-900 rounded-lg p-4 overflow-auto max-h-64">
-                <pre className="text-green-400 text-xs font-mono">
-                  {JSON.stringify(leads[0], null, 2)}
-                </pre>
-              </div>
-            </div>
-          )}
-
           <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 overflow-hidden">
             <div className="p-6 border-b border-[#684e3a]/15 flex justify-between items-center">
               <div>

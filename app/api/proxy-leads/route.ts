@@ -119,8 +119,8 @@ export async function GET(request: Request) {
         time: item.unidadenome || 'Geral',
         data_entrada: parseImoviewDate(item.datahoraentradalead) || new Date().toISOString(),
         primeira_interacao: parseImoviewDate(item.datahoraultimainteracao) || null,
-        midia: item.midia || item.origem || item.campanha || item.utm_campaign || item.campaign || 'Desconhecida', // Fallback robusto
-        origem: item.midia || item.origem || item.campanha || item.utm_campaign || item.campaign || 'Desconhecida', // Manter compatibilidade
+        midia: item.origem || item.midia || item.campanha || item.utm_campaign || item.campaign || 'Desconhecida', // Origem identificada pelo cliente
+        origem: item.origem || item.midia || item.campanha || item.utm_campaign || item.campaign || 'Desconhecida', // Manter compatibilidade
         _raw: item
       };
     });
