@@ -132,15 +132,9 @@ export async function GET(request: NextRequest) {
     // Calcular totais globais
     const totals = mergedData.reduce((acc: any, campaign: MetaCampaign) => {
       acc.totalSpend += Number(campaign.spend);
-<<<<<<< HEAD
-      acc.totalImpressions += campaign.impressions;
-      acc.totalClicks += campaign.clicks;
-      acc.totalLeads += campaign.leads;
-=======
       acc.totalImpressions += Number(campaign.impressions);
       acc.totalClicks += Number(campaign.clicks);
       acc.totalLeads += Number(campaign.leads);
->>>>>>> 1934d90f0ad61ea0af5d099a168aa5d67864b162
       return acc;
     }, {
       totalSpend: 0,
@@ -151,11 +145,7 @@ export async function GET(request: NextRequest) {
 
     const avgCpc = totals.totalClicks > 0 ? (totals.totalSpend / totals.totalClicks).toFixed(2) : '0.00';
     const avgCpl = totals.totalLeads > 0 ? (totals.totalSpend / totals.totalLeads).toFixed(2) : '0.00';
-<<<<<<< HEAD
     
-=======
-
->>>>>>> 1934d90f0ad61ea0af5d099a168aa5d67864b162
     return NextResponse.json({
       success: true,
       data: mergedData,
