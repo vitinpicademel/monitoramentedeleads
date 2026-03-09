@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
 
 // Fazer requisições simultâneas para todas as contas buscando campanhas individuais
     const accountPromises = adAccounts.map(async (account) => {
-      const endpoint = `https://graph.facebook.com/v19.0/act_${account.id}/campaigns?fields=name,status,start_time,stop_time,updated_time,insights{spend,impressions,clicks,actions}&date_preset=${datePreset}&access_token=${accessToken}`;
+      const endpoint = `https://graph.facebook.com/v19.0/act_${account.id}/campaigns?fields=name,status,start_time,stop_time,updated_time,insights.date_preset(${datePreset}){spend,impressions,clicks,actions}&access_token=${accessToken}`;
       
       try {
         const response = await fetch(endpoint);
