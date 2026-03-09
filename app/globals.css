@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+:root {
+  /* Custom variables if needed, but Tailwind utilities are preferred */
+}
+
+body {
+  /* Reset default styles */
+  @apply bg-slate-50 text-slate-900;
+}

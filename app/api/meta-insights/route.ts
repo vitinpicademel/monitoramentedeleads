@@ -11,12 +11,14 @@ interface MetaCampaign {
   impressions: number;
   clicks: number;
   leads: number;
+  resultados: number;
   ctr: string;
   cpc: string;
   cpl: string;
   status: string;
   start_time: string;
-  stop_time: string;
+  stop_time?: string;
+  updated_time?: string;
   teamName: string;
 }
 
@@ -59,9 +61,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fazer requisições simultâneas para todas as contas buscando campanhas individuais
+// Fazer requisições simultâneas para todas as contas buscando campanhas individuais
     const accountPromises = adAccounts.map(async (account) => {
-      const endpoint = `https://graph.facebook.com/v19.0/act_${account.id}/campaigns?fields=name,status,start_time,stop_time,insights{spend,impressions,clicks,actions}&date_preset=${datePreset}&access_token=${accessToken}`;
+      const endpoint = `https://graph.facebook.com/v19.0/act_${account.id}/campaigns?fields=name,status,start_time,stop_time,updated_time,insights{spend,impressions,clicks,actions}&date_preset=${datePreset}&access_token=${accessToken}`;
       
       try {
         const response = await fetch(endpoint);
@@ -73,31 +75,44 @@ export async function GET(request: NextRequest) {
 
         const data = await response.json();
         
+        const isConversionAction = (actionType: string) => {
+          const normalized = String(actionType || '').toLowerCase();
+          if (!normalized) return false;
+          if (normalized.includes('lead')) return true;
+          if (normalized.includes('contact')) return true;
+          if (normalized.includes('messaging_conversation_started')) return true;
+          return false;
+        };
+
         // Processar os dados e injetar teamName
         const processedData = data.data?.map((campaign: any) => {
           const insights = campaign.insights?.data?.[0] || {};
-          const leads = insights.actions?.find((action: any) => action.action_type === 'lead')?.value || 0;
-          const spend = parseFloat(insights.spend || 0);
-          const impressions = insights.impressions || 0;
-          const clicks = insights.clicks || 0;
-          
-          const ctr = impressions > 0 ? ((clicks / impressions) * 100).toFixed(2) : '0.00';
-          const cpc = clicks > 0 ? (spend / clicks).toFixed(2) : '0.00';
-          const cpl = leads > 0 ? (spend / leads).toFixed(2) : '0.00';
-          
+          const actions = Array.isArray(insights.actions) ? insights.actions : [];
+          const leads = actions.find((action: any) => action.action_type === 'lead')?.value || 0;
+          const resultados = actions.reduce((sum: number, action: any) => {
+            if (!isConversionAction(action?.action_type)) return sum;
+            const value = Number(action?.value) || 0;
+            return sum + value;
+          }, 0);
+          const ctr = insights.impressions > 0 ? ((insights.clicks / insights.impressions) * 100).toFixed(2) : '0.00';
+          const cpc = insights.clicks > 0 ? (insights.spend / insights.clicks).toFixed(2) : '0.00';
+          const cpl = leads > 0 ? (insights.spend / leads).toFixed(2) : '0.00';
+
           return {
             campaign_name: campaign.name,
-            spend: spend.toFixed(2),
-            impressions: impressions,
-            clicks: clicks,
+            spend: parseFloat(insights.spend || 0).toFixed(2),
+            impressions: insights.impressions || 0,
+            clicks: insights.clicks || 0,
             leads: leads,
+            resultados: resultados,
             ctr: ctr,
             cpc: cpc,
             cpl: cpl,
-            status: campaign.status,
+            status: campaign.status || 'UNKNOWN',
             start_time: campaign.start_time,
             stop_time: campaign.stop_time,
-            teamName: account.name // Injetar o nome da conta
+            updated_time: campaign.updated_time,
+            teamName: account.name
           };
         }) || [];
 
@@ -117,9 +132,15 @@ export async function GET(request: NextRequest) {
     // Calcular totais globais
     const totals = mergedData.reduce((acc: any, campaign: MetaCampaign) => {
       acc.totalSpend += Number(campaign.spend);
+<<<<<<< HEAD
       acc.totalImpressions += campaign.impressions;
       acc.totalClicks += campaign.clicks;
       acc.totalLeads += campaign.leads;
+=======
+      acc.totalImpressions += Number(campaign.impressions);
+      acc.totalClicks += Number(campaign.clicks);
+      acc.totalLeads += Number(campaign.leads);
+>>>>>>> 1934d90f0ad61ea0af5d099a168aa5d67864b162
       return acc;
     }, {
       totalSpend: 0,
@@ -130,7 +151,11 @@ export async function GET(request: NextRequest) {
 
     const avgCpc = totals.totalClicks > 0 ? (totals.totalSpend / totals.totalClicks).toFixed(2) : '0.00';
     const avgCpl = totals.totalLeads > 0 ? (totals.totalSpend / totals.totalLeads).toFixed(2) : '0.00';
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> 1934d90f0ad61ea0af5d099a168aa5d67864b162
     return NextResponse.json({
       success: true,
       data: mergedData,

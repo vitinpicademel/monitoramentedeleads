@@ -83,14 +83,9 @@ interface MetaCampaign {
   impressions: number;
   clicks: number;
   leads: number;
-  resultados: number;
   ctr: string;
   cpc: string;
   cpl: string;
-  status: string;
-  start_time: string;
-  stop_time?: string;
-  updated_time?: string;
   teamName: string;
 }
 
@@ -117,11 +112,6 @@ export default function Dashboard() {
   const [selectedTeam, setSelectedTeam] = useState<string>('Todos');
   const [viewMode, setViewMode] = useState<'operacional' | 'meta-ads'>('operacional');
   const [dataMode, setDataMode] = useState<'atendimentos' | 'geral'>('atendimentos');
-
-  // Estados para filtros da tabela Meta Ads
-  const [selectedAccount, setSelectedAccount] = useState<string>('Todas as Contas');
-  const [selectedStatus, setSelectedStatus] = useState<string>('Todos os Status');
-  const [datePreset, setDatePreset] = useState<string>('last_30d');
 
   // Fetch Data
   const fetchLeads = async () => {
@@ -176,17 +166,11 @@ export default function Dashboard() {
     }
   }, [viewMode]);
 
-  useEffect(() => {
-    if (viewMode === 'meta-ads' && datePreset) {
-      fetchMetaAds();
-    }
-  }, [datePreset]);
-
   const fetchMetaAds = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/meta-insights?date_preset=${datePreset}`);
+      const res = await fetch('/api/meta-insights');
       if (!res.ok) {
         const errData = await res.json();
         throw new Error(errData.error || `Erro ${res.status}`);
@@ -202,7 +186,7 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
- 
+
   const fetchLeadsAll = async () => {
     setLoading(true);
     setError(null);
@@ -239,55 +223,6 @@ export default function Dashboard() {
   // --- Process Data ---
 
   const currentLeads = dataMode === 'geral' ? leadsAll : leads;
-
-  // Lógica de ordenação e filtragem para Meta Ads
-  const sortedAndFilteredCampaigns = useMemo(() => {
-    let filtered = metaCampaigns;
-
-    // Aplicar filtros
-    if (selectedAccount !== 'Todas as Contas') {
-      filtered = filtered.filter((campaign: MetaCampaign) => campaign.teamName === selectedAccount);
-    }
-
-    if (selectedStatus !== 'Todos os Status') {
-      const statusMap: Record<string, string[]> = {
-        'Ativas': ['active', 'ACTIVE'],
-        'Pausadas': ['paused', 'PAUSED']
-      };
-
-      const validStatuses = statusMap[selectedStatus] || [];
-      filtered = filtered.filter((campaign: MetaCampaign) => validStatuses.includes(campaign.status));
-    }
-
-    // Ordenação padrão: Conta > Status (Ativas primeiro) > Valor gasto (desc)
-    return filtered.sort((a: MetaCampaign, b: MetaCampaign) => {
-      // 1) Agrupar por Conta
-      const accountCompare = a.teamName.localeCompare(b.teamName);
-      if (accountCompare !== 0) return accountCompare;
-
-      // 2) Dentro da conta: Ativas no topo
-      const getStatusPriority = (status: string) => {
-        const statusLower = status.toLowerCase();
-        if (statusLower === 'active' || statusLower === 'ativa') return 0;
-        if (statusLower === 'paused' || statusLower === 'pausada') return 1;
-        return 2;
-      };
-
-      const statusCompare = getStatusPriority(a.status) - getStatusPriority(b.status);
-      if (statusCompare !== 0) return statusCompare;
-
-      // 3) Por fim: Valor gasto (desc)
-      const spendA = Number(a.spend) || 0;
-      const spendB = Number(b.spend) || 0;
-      return spendB - spendA;
-    });
-  }, [metaCampaigns, selectedAccount, selectedStatus]);
-
-  // Contas únicas para o filtro
-  const uniqueAccounts = useMemo(() => {
-    const accounts = [...new Set(metaCampaigns.map((c: MetaCampaign) => c.teamName))].sort();
-    return ['Todas as Contas', ...accounts];
-  }, [metaCampaigns]);
 
   const teams = useMemo(() => {
     const allTeams = new Set(currentLeads.map(l => l.time || 'Geral'));
@@ -399,7 +334,7 @@ export default function Dashboard() {
           </div>
           <p className="text-sm text-[#684e3a] mb-6 leading-relaxed">{error}</p>
           <button 
-            onClick={() => viewMode === 'meta-ads' ? fetchMetaAds() : fetchLeads()}
+            onClick={fetchLeads}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#3d2e28] text-[#FAF9F6] text-sm font-medium tracking-wide hover:bg-[#684e3a] transition-colors"
           >
             <RefreshCcw size={18} />
@@ -626,247 +561,7 @@ export default function Dashboard() {
             </div>
           )}
         </section>
-        ) : (
-        /* Meta Ads View */
-        <section>
-          {metaCampaigns.length > 0 ? (
-            <>
-              {/* KPI Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <KpiCard
-                  title="Investimento Total"
-                  value={new Intl.NumberFormat('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL'
-                  }).format(Number(metaSummary?.totalSpend || 0))}
-                  icon={<DollarSign className="h-6 w-6 text-[#c89968]" />}
-                />
-                <KpiCard
-                  title="Impressões"
-                  value={new Intl.NumberFormat('pt-BR').format(Number(metaSummary?.totalImpressions || 0))}
-                  icon={<Eye className="h-6 w-6 text-[#c89968]" />}
-                />
-                <KpiCard
-                  title="Cliques"
-                  value={new Intl.NumberFormat('pt-BR').format(Number(metaSummary?.totalClicks || 0))}
-                  icon={<MousePointer className="h-6 w-6 text-[#c89968]" />}
-                />
-                <KpiCard
-                  title="Leads Gerados"
-                  value={new Intl.NumberFormat('pt-BR').format(Number(metaSummary?.totalLeads || 0))}
-                  icon={<Target className="h-6 w-6 text-[#c89968]" />}
-                />
-              </div>
 
-              {/* Campaigns Table */}
-              <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 overflow-hidden">
-                <div className="p-6 border-b border-[#684e3a]/15">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                      <h3 className="text-sm sm:text-base font-semibold tracking-wide text-[#3d2e28] uppercase">
-                        Detalhamento de Campanhas Meta Ads
-                      </h3>
-                      <p className="text-xs text-[#684e3a] mt-1 tracking-wide">
-                        Métricas de desempenho por campanha
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs sm:text-sm text-[#684e3a] font-medium">
-                        {sortedAndFilteredCampaigns.length} de {metaCampaigns.length} campanhas
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                    <div className="flex flex-col">
-                      <label className="text-xs font-medium text-[#684e3a] mb-1 uppercase tracking-wide">Filtrar por Conta</label>
-                      <select
-                        value={selectedAccount}
-                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedAccount(e.target.value)}
-                        className="px-3 py-2 text-sm border border-[#684e3a]/30 rounded-lg bg-white text-[#3d2e28] focus:outline-none focus:ring-2 focus:ring-[#c89968]/50 focus:border-[#c89968]"
-                      >
-                        {uniqueAccounts.map((account: string) => (
-                          <option key={account} value={account}>
-                            {account}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="flex flex-col">
-                      <label className="text-xs font-medium text-[#684e3a] mb-1 uppercase tracking-wide">Filtrar por Status</label>
-                      <select
-                        value={selectedStatus}
-                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedStatus(e.target.value)}
-                        className="px-3 py-2 text-sm border border-[#684e3a]/30 rounded-lg bg-white text-[#3d2e28] focus:outline-none focus:ring-2 focus:ring-[#c89968]/50 focus:border-[#c89968]"
-                      >
-                        <option value="Todos os Status">Todos os Status</option>
-                        <option value="Ativas">Ativas</option>
-                        <option value="Pausadas">Pausadas</option>
-                      </select>
-                    </div>
-
-                    <div className="flex flex-col">
-                      <label className="text-xs font-medium text-[#684e3a] mb-1 uppercase tracking-wide">PERÍODO</label>
-                      <select
-                        value={datePreset}
-                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setDatePreset(e.target.value)}
-                        className="px-3 py-2 text-sm border border-[#684e3a]/30 rounded-lg bg-white text-[#3d2e28] focus:outline-none focus:ring-2 focus:ring-[#c89968]/50 focus:border-[#c89968]"
-                      >
-                        <option value="today">Hoje</option>
-                        <option value="yesterday">Ontem</option>
-                        <option value="last_7d">Últimos 7 dias</option>
-                        <option value="last_30d">Últimos 30 dias</option>
-                        <option value="this_month">Este mês</option>
-                        <option value="last_month">Mês passado</option>
-                        <option value="maximum">Vitalício</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs text-[#3d2e28] min-w-[1200px]">
-                    <thead className="bg-[#FAF9F6] text-[10px] uppercase font-semibold tracking-[0.18em] text-[#684e3a]">
-                      <tr>
-                        <th className="px-4 py-3">Nome da Campanha</th>
-                        <th className="px-4 py-3">Status</th>
-                        <th className="px-4 py-3">Início</th>
-                        <th className="px-4 py-3">Fim</th>
-                        <th className="px-4 py-3">Conta / Operação</th>
-                        <th className="px-4 py-3">Valor Gasto</th>
-                        <th className="px-4 py-3">Impressões</th>
-                        <th className="px-4 py-3">Cliques</th>
-                        <th className="px-4 py-3">CTR (%)</th>
-                        <th className="px-4 py-3">Leads</th>
-                        <th className="px-4 py-3">Resultados</th>
-                        <th className="px-4 py-3">CPL</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#684e3a]/10">
-                      {sortedAndFilteredCampaigns.map((campaign: MetaCampaign, index: number) => {
-                        const cplValue = campaign.leads > 0 ? Number(campaign.spend) / campaign.leads : 0;
-                        const formatDate = (dateString?: string) => {
-                          if (!dateString) return '--';
-                          return new Date(dateString).toLocaleDateString('pt-BR');
-                        };
-                        
-                        const getStatusBadge = (status: string) => {
-                          const statusLower = status.toLowerCase();
-                          if (statusLower === 'active' || statusLower === 'ativa') {
-                            return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-                          } else if (statusLower === 'paused' || statusLower === 'pausada') {
-                            return 'bg-slate-100 text-slate-700 border-slate-200';
-                          } else if (statusLower === 'archived' || statusLower === 'arquivada') {
-                            return 'bg-amber-100 text-amber-700 border-amber-200';
-                          }
-                          return 'bg-gray-100 text-gray-700 border-gray-200';
-                        };
-
-                        return (
-                          <tr
-                            key={index}
-                            className="hover:bg-[#c89968]/5 transition-colors"
-                          >
-                            <td className="px-4 py-3 font-medium text-[#3d2e28] max-w-[200px] truncate">
-                              <span title={campaign.campaign_name}>
-                                {campaign.campaign_name}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold border ${getStatusBadge(campaign.status)}`}>
-                                <span className={`w-1.5 h-1.5 rounded-full mr-1 ${
-                                  campaign.status.toLowerCase() === 'active' ? 'bg-emerald-500' :
-                                  campaign.status.toLowerCase() === 'paused' ? 'bg-slate-500' :
-                                  'bg-gray-500'
-                                }`}></span>
-                                {campaign.status === 'active' ? 'Ativa' : 
-                                 campaign.status === 'paused' ? 'Pausada' :
-                                 campaign.status === 'archived' ? 'Arquivada' :
-                                 campaign.status}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-xs text-[#3d2e28] whitespace-nowrap">
-                              {formatDate(campaign.start_time)}
-                            </td>
-                            <td className="px-4 py-3 text-xs text-[#3d2e28] whitespace-nowrap">
-                              {campaign.status?.toLowerCase() === 'paused' ? (
-                                <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold tracking-wide bg-slate-100 text-slate-700 border border-slate-200">
-                                  Pausada em: {formatDate(campaign.updated_time)}
-                                </span>
-                              ) : (
-                                formatDate(campaign.stop_time)
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold tracking-wide bg-[#3d2e28]/10 text-[#3d2e28]">
-                                {campaign.teamName}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap">
-                              <span className="text-xs font-semibold text-[#3d2e28]">
-                                {new Intl.NumberFormat('pt-BR', {
-                                  style: 'currency',
-                                  currency: 'BRL'
-                                }).format(Number(campaign.spend))}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-xs text-[#3d2e28]">
-                              {new Intl.NumberFormat('pt-BR').format(Number(campaign.impressions))}
-                            </td>
-                            <td className="px-4 py-3 text-xs text-[#3d2e28]">
-                              {new Intl.NumberFormat('pt-BR').format(Number(campaign.clicks))}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold tracking-wide bg-[#c89968]/15 text-[#3d2e28]">
-                                {campaign.ctr}%
-                              </span>
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold tracking-wide ${
-                                campaign.leads > 0 
-                                  ? 'bg-[#3d2e28]/10 text-[#3d2e28]'
-                                  : 'bg-[#684e3a]/10 text-[#684e3a]'
-                              }`}>
-                                {new Intl.NumberFormat('pt-BR').format(Number(campaign.leads))}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold tracking-wide ${
-                                Number(campaign.resultados) > 0
-                                  ? 'bg-[#c89968]/15 text-[#3d2e28]'
-                                  : 'bg-[#684e3a]/10 text-[#684e3a]'
-                              }`}>
-                                {new Intl.NumberFormat('pt-BR').format(Number(campaign.resultados || 0))}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap">
-                              <span className="text-xs font-semibold text-[#3d2e28]">
-                                {new Intl.NumberFormat('pt-BR', {
-                                  style: 'currency',
-                                  currency: 'BRL'
-                                }).format(cplValue)}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 p-12 text-center">
-              <p className="text-sm sm:text-base font-medium tracking-wide text-[#c89968]">
-                Nenhuma campanha encontrada
-              </p>
-            </div>
-          )}
-        </section>
-        )}
-
-        {/* Tabela de Detalhamento de Leads - Apenas para Visão Operacional */}
-        {viewMode === 'operacional' && (
         <section>
           <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 overflow-hidden">
             <div className="p-6 border-b border-[#684e3a]/15 flex justify-between items-center">
@@ -992,6 +687,199 @@ export default function Dashboard() {
             )}
           </div>
         </section>
+        <section>
+          <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 overflow-hidden">
+            <div className="p-6 border-b border-[#684e3a]/15 flex justify-between items-center">
+              <div>
+                <h3 className="text-sm sm:text-base font-semibold tracking-wide text-[#3d2e28] uppercase">
+                  Leads Pendentes
+                </h3>
+                <p className="text-xs text-[#684e3a] mt-1 tracking-wide">
+                  Chegaram no sistema e ainda não iniciaram atendimento
+                </p>
+              </div>
+              <span className="text-xs sm:text-sm text-[#684e3a] font-medium">
+                {filteredLeads.filter(l => !l.primeira_interacao).length} registros
+              </span>
+            </div>
+            {filteredLeads.filter(l => !l.primeira_interacao).length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-[#3d2e28]">
+                  <thead className="bg-[#FAF9F6] text-[11px] uppercase font-semibold tracking-[0.18em] text-[#684e3a]">
+                    <tr>
+                      <th className="px-6 py-4">Data</th>
+                      <th className="px-6 py-4">Nome</th>
+                      <th className="px-6 py-4">Contato</th>
+                      <th className="px-6 py-4">Email</th>
+                      <th className="px-6 py-4">Status</th>
+                      <th className="px-6 py-4">Time</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#684e3a]/10">
+                    {filteredLeads.filter(l => !l.primeira_interacao).map(lead => (
+                      <tr key={lead.id} className="hover:bg-[#c89968]/5 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-semibold text-[#3d2e28]">
+                            {new Date(lead.data_entrada).toLocaleDateString('pt-BR')}
+                          </div>
+                          <div className="text-xs text-[#684e3a]">
+                            {new Date(lead.data_entrada).toLocaleTimeString('pt-BR', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 font-medium text-[#3d2e28]">{lead.nome}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-col items-start">
+                            <div className="flex items-center gap-1.5 text-[#3d2e28] font-medium">
+                              <Phone size={14} className="text-[#684e3a]" />
+                              <span>{formatPhoneNumber(lead.telefone)}</span>
+                            </div>
+                            <CopyAction value={lead.telefone} />
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 max-w-[220px]">
+                          <div className="flex flex-col items-start">
+                            <span className="text-sm text-[#684e3a] truncate w-full" title={lead.email}>
+                              {lead.email || '--'}
+                            </span>
+                            {lead.email && <CopyAction value={lead.email} />}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[#c89968]/15 text-[#3d2e28]">
+                            {lead.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-[#3d2e28]">
+                          {lead.time || '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="p-12 text-center">
+                <p className="text-sm sm:text-base font-medium tracking-wide text-[#c89968]">
+                  Nenhum dado encontrado
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+        ) : (
+        /* Meta Ads View */
+        <section>
+          {metaCampaigns.length > 0 ? (
+            <>
+              {/* KPI Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <KpiCard
+                  title="Investimento Total"
+                  value={`R$ ${metaSummary?.totalSpend || '0'}`}
+                  icon={<DollarSign className="h-6 w-6 text-[#c89968]" />}
+                />
+                <KpiCard
+                  title="Impressões"
+                  value={metaSummary?.totalImpressions?.toLocaleString('pt-BR') || '0'}
+                  icon={<Eye className="h-6 w-6 text-[#c89968]" />}
+                />
+                <KpiCard
+                  title="Cliques"
+                  value={metaSummary?.totalClicks?.toLocaleString('pt-BR') || '0'}
+                  icon={<MousePointer className="h-6 w-6 text-[#c89968]" />}
+                />
+                <KpiCard
+                  title="Leads Gerados"
+                  value={metaSummary?.totalLeads?.toLocaleString('pt-BR') || '0'}
+                  icon={<Target className="h-6 w-6 text-[#c89968]" />}
+                />
+              </div>
+
+              {/* Campaigns Table */}
+              <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 overflow-hidden">
+                <div className="p-6 border-b border-[#684e3a]/15 flex justify-between items-center">
+                  <div>
+                    <h3 className="text-sm sm:text-base font-semibold tracking-wide text-[#3d2e28] uppercase">
+                      Detalhamento de Campanhas Meta Ads
+                    </h3>
+                    <p className="text-xs text-[#684e3a] mt-1 tracking-wide">
+                      Métricas de desempenho por campanha
+                    </p>
+                  </div>
+                  <span className="text-xs sm:text-sm text-[#684e3a] font-medium">
+                    {metaCampaigns.length} campanhas
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm text-[#3d2e28]">
+                    <thead className="bg-[#FAF9F6] text-[11px] uppercase font-semibold tracking-[0.18em] text-[#684e3a]">
+                      <tr>
+                        <th className="px-6 py-4">Nome da Campanha</th>
+                        <th className="px-6 py-4">Conta / Operação</th>
+                        <th className="px-6 py-4">Valor Gasto</th>
+                        <th className="px-6 py-4">Impressões</th>
+                        <th className="px-6 py-4">Cliques</th>
+                        <th className="px-6 py-4">CTR (%)</th>
+                        <th className="px-6 py-4">Leads</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#684e3a]/10">
+                      {metaCampaigns.map((campaign, index) => (
+                        <tr
+                          key={index}
+                          className="hover:bg-[#c89968]/5 transition-colors"
+                        >
+                          <td className="px-6 py-4 font-medium text-[#3d2e28]">
+                            {campaign.campaign_name}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[#3d2e28]/10 text-[#3d2e28]">
+                              {campaign.teamName}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm font-semibold text-[#3d2e28]">
+                              R$ {parseFloat(campaign.spend).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-[#3d2e28]">
+                            {campaign.impressions.toLocaleString('pt-BR')}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-[#3d2e28]">
+                            {campaign.clicks.toLocaleString('pt-BR')}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[#c89968]/15 text-[#3d2e28]">
+                              {campaign.ctr}%
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide ${
+                              campaign.leads > 0 
+                                ? 'bg-[#3d2e28]/10 text-[#3d2e28]'
+                                : 'bg-[#684e3a]/10 text-[#684e3a]'
+                            }`}>
+                              {campaign.leads.toLocaleString('pt-BR')}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 p-12 text-center">
+              <p className="text-sm sm:text-base font-medium tracking-wide text-[#c89968]">
+                Nenhuma campanha encontrada
+              </p>
+            </div>
+          )}
+        </section>
         )}
       </main>
     </div>
@@ -1001,13 +889,11 @@ export default function Dashboard() {
 function KpiCard({ title, value, icon }: { title: string, value: string | number, icon: React.ReactNode }) {
   return (
     <div className="bg-white/95 p-6 rounded-2xl border border-[#684e3a]/20 flex items-start justify-between transition-all duration-200 hover:-translate-y-0.5 hover:border-[#c89968] hover:shadow-md">
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium tracking-wide text-[#684e3a] mb-1 uppercase truncate">{title}</p>
-        <h4 className="text-xl font-semibold text-[#3d2e28] truncate" style={{ fontSize: 'clamp(1rem, 2.5vw, 1.25rem)' }}>
-          {value}
-        </h4>
+      <div>
+        <p className="text-xs font-medium tracking-wide text-[#684e3a] mb-1 uppercase">{title}</p>
+        <h4 className="text-2xl font-semibold text-[#3d2e28]">{value}</h4>
       </div>
-      <div className="p-3 rounded-full bg-[#FAF9F6] border border-[#684e3a]/20 ml-3 flex-shrink-0">
+      <div className="p-3 rounded-full bg-[#FAF9F6] border border-[#684e3a]/20">
         {icon}
       </div>
     </div>
@@ -1039,7 +925,7 @@ function CopyAction({ value }: { value: string }) {
       {!copied && (
         <ArrowUpRight 
           size={12} 
-          className="text-[#684e3a] group-hover:text-[#c89968] transition-colors" 
+          className="text-[#684e3a]/60 group-hover:text-[#c89968] transition-colors" 
         />
       )}
     </button>
