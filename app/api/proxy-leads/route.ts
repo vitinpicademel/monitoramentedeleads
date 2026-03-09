@@ -14,44 +14,52 @@ export async function GET(request: Request) {
     );
   }
 
-  // Helper function para buscar leads com paginação completa
+  // Helper function para buscar leads com paginação segura e otimizada
   const fetchAllLeadsByPurpose = async (finalidade: number) => {
     // finalidade: 1-Aluguel, 2-Venda
     const allLeads: any[] = [];
     let currentPage = 1;
-    const recordsPerPage = 50; // Aumentando para 50 para reduzir requisições
+    const recordsPerPage = 50;
+    const maxPages = 8; // Limite de segurança: máximo 8 páginas (400 leads)
     let hasMoreLeads = true;
 
-    while (hasMoreLeads) {
+    // Calcular data de 30 dias atrás para filtro
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const dataInicio = thirtyDaysAgo.toLocaleDateString('pt-BR').replace(/\//g, '-'); // Formato DD-MM-YYYY
+
+    while (hasMoreLeads && currentPage <= maxPages) {
       const params = new URLSearchParams({
         numeroPagina: currentPage.toString(),
         numeroRegistros: recordsPerPage.toString(),
         finalidade: finalidade.toString(),
-        situacao: '0' // 0 para todos
+        situacao: '0', // 0 para todos
+        data_inicio: dataInicio // Apenas últimos 30 dias
       });
 
       try {
-        console.log(`Buscando página ${currentPage} para finalidade ${finalidade}...`);
+        console.log(`Buscando página ${currentPage}/${maxPages} para finalidade ${finalidade} (últimos 30 dias)...`);
         
         const res = await fetch(`${BASE_URL}/Atendimento/RetornarAtendimentos?${params.toString()}`, {
           headers: {
             'chave': API_KEY,
             'Content-Type': 'application/json'
           },
-          // Timeout de 15 segundos por requisição
-          signal: AbortSignal.timeout(15000)
+          // Timeout reduzido para 10 segundos
+          signal: AbortSignal.timeout(10000)
         });
 
         if (!res.ok) {
           const txt = await res.text();
           console.error(`Erro Imoview (Finalidade ${finalidade}, Página ${currentPage}): ${res.status} - ${txt}`);
-          // Se der erro de rate limit, esperar e tentar novamente
+          
+          // Graceful degradation: se der erro, parar mas retornar o que já conseguiu
           if (res.status === 429) {
-            console.log('Rate limit detectado, aguardando 2 segundos...');
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            continue; // Tentar a mesma página novamente
+            console.log('Rate limit detectado, parando busca para evitar bloqueio. Retornando leads acumulados.');
+          } else if (res.status >= 500) {
+            console.log('Erro servidor detectado, parando busca. Retornando leads acumulados.');
           }
-          break; // Se for outro erro, parar
+          break; // Parar busca mas manter os leads já coletados
         }
         
         const data = await res.json();
@@ -73,41 +81,68 @@ export async function GET(request: Request) {
           console.log(`Página ${currentPage}: ${pageLeads.length} leads encontrados`);
           allLeads.push(...pageLeads);
           
-          // Se retornou menos que o limite, acabaram os leads
+          // Se retornou menos que o limite, pode ser que acabou ou atingiu o filtro de data
           if (pageLeads.length < recordsPerPage) {
+            console.log(`Página com menos registros que o limite (${pageLeads.length} < ${recordsPerPage}), finalizando busca.`);
             hasMoreLeads = false;
           } else {
             currentPage++;
-            // Pequeno delay entre requisições para evitar rate limit
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // Delay menor entre requisições para melhor performance
+            await new Promise(resolve => setTimeout(resolve, 300));
           }
         }
       } catch (e) {
         console.error(`Exception buscando página ${currentPage} da finalidade ${finalidade}:`, e);
+        
+        // Graceful degradation: manter leads já coletados em caso de erro
         if (e instanceof Error && e.name === 'AbortError') {
-          console.log('Timeout na requisição, tentando novamente...');
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          continue; // Tentar novamente
+          console.log('Timeout na requisição, parando busca. Retornando leads acumulados.');
+        } else {
+          console.log('Erro inesperado, parando busca. Retornando leads acumulados.');
         }
-        break; // Se for outro erro, parar
+        break; // Parar mas não perder os dados já coletados
       }
     }
 
-    console.log(`Finalidade ${finalidade}: Total de ${allLeads.length} leads coletados`);
+    if (currentPage > maxPages) {
+      console.log(`Limite máximo de páginas (${maxPages}) atingido para finalidade ${finalidade}.`);
+    }
+    
+    console.log(`Finalidade ${finalidade}: Total de ${allLeads.length} leads coletados (últimos 30 dias)`);
     return allLeads;
   };
 
   try {
-    console.log('Iniciando busca completa de leads do Imoview...');
-    const [aluguelData, vendaData] = await Promise.all([
-      fetchAllLeadsByPurpose(1),
-      fetchAllLeadsByPurpose(2)
-    ]);
+    console.log('Iniciando busca otimizada de leads do Imoview (últimos 30 dias)...');
+    
+    let aluguelData: any[] = [];
+    let vendaData: any[] = [];
+
+    // Graceful degradation: buscar cada finalidade separadamente
+    try {
+      aluguelData = await fetchAllLeadsByPurpose(1);
+    } catch (error) {
+      console.error('Falha ao buscar leads de aluguel, continuando com venda:', error);
+      aluguelData = []; // Garantir array vazio em caso de falha
+    }
+
+    try {
+      vendaData = await fetchAllLeadsByPurpose(2);
+    } catch (error) {
+      console.error('Falha ao buscar leads de venda, continuando com aluguel:', error);
+      vendaData = []; // Garantir array vazio em caso de falha
+    }
 
     console.log(`Busca concluída: ${aluguelData.length} leads de aluguel, ${vendaData.length} leads de venda`);
 
-    // Combinar listas
+    // Combinar listas - sempre teremos um array válido
     const rawLeads = [...aluguelData, ...vendaData];
+    
+    // Se não conseguiu nenhum lead, retornar array vazio mas não erro
+    if (rawLeads.length === 0) {
+      console.log('Nenhum lead encontrado nos últimos 30 dias, retornando array vazio.');
+      return NextResponse.json({ leads: [] });
+    }
 
     // Função auxiliar para converter data "DD/MM/YYYY HH:mm" para ISO
     const parseImoviewDate = (dateStr: string) => {
