@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 
+// Cache forte por 5 minutos para evitar rate limit e timeout
+export const revalidate = 300;
+
 export async function GET(request: Request) {
   const API_KEY = process.env.IMOVIEW_API_KEY;
   const BASE_URL = 'https://api.imoview.com.br';
@@ -11,61 +14,100 @@ export async function GET(request: Request) {
     );
   }
 
-  // Helper function to fetch leads by purpose (finalidade)
-  const fetchLeads = async (finalidade: number) => {
+  // Helper function para buscar leads com paginação completa
+  const fetchAllLeadsByPurpose = async (finalidade: number) => {
     // finalidade: 1-Aluguel, 2-Venda
-    // Docs say max 20 records per page.
-    const params = new URLSearchParams({
-      numeroPagina: '1',
-      numeroRegistros: '20', 
-      finalidade: finalidade.toString(),
-      situacao: '0' // 0 para todos
-    });
+    const allLeads: any[] = [];
+    let currentPage = 1;
+    const recordsPerPage = 50; // Aumentando para 50 para reduzir requisições
+    let hasMoreLeads = true;
 
-    try {
-      const res = await fetch(`${BASE_URL}/Atendimento/RetornarAtendimentos?${params.toString()}`, {
-        headers: {
-          'chave': API_KEY, // Header correto identificado no Swagger
-          'Content-Type': 'application/json'
-        }
+    while (hasMoreLeads) {
+      const params = new URLSearchParams({
+        numeroPagina: currentPage.toString(),
+        numeroRegistros: recordsPerPage.toString(),
+        finalidade: finalidade.toString(),
+        situacao: '0' // 0 para todos
       });
 
-      if (!res.ok) {
-        const txt = await res.text();
-        console.error(`Erro Imoview (Finalidade ${finalidade}): ${res.status} - ${txt}`);
-        return [];
+      try {
+        console.log(`Buscando página ${currentPage} para finalidade ${finalidade}...`);
+        
+        const res = await fetch(`${BASE_URL}/Atendimento/RetornarAtendimentos?${params.toString()}`, {
+          headers: {
+            'chave': API_KEY,
+            'Content-Type': 'application/json'
+          },
+          // Timeout de 15 segundos por requisição
+          signal: AbortSignal.timeout(15000)
+        });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          console.error(`Erro Imoview (Finalidade ${finalidade}, Página ${currentPage}): ${res.status} - ${txt}`);
+          // Se der erro de rate limit, esperar e tentar novamente
+          if (res.status === 429) {
+            console.log('Rate limit detectado, aguardando 2 segundos...');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            continue; // Tentar a mesma página novamente
+          }
+          break; // Se for outro erro, parar
+        }
+        
+        const data = await res.json();
+        const extractList = (data: any) => {
+          if (!data) return [];
+          if (Array.isArray(data)) return data;
+          if (Array.isArray(data.lista)) return data.lista;
+          if (Array.isArray(data.atendimentos)) return data.atendimentos;
+          if (Array.isArray(data.resultado)) return data.resultado;
+          return [];
+        };
+
+        const pageLeads = extractList(data);
+        
+        if (pageLeads.length === 0) {
+          console.log(`Página ${currentPage} vazia, finalizando busca para finalidade ${finalidade}`);
+          hasMoreLeads = false;
+        } else {
+          console.log(`Página ${currentPage}: ${pageLeads.length} leads encontrados`);
+          allLeads.push(...pageLeads);
+          
+          // Se retornou menos que o limite, acabaram os leads
+          if (pageLeads.length < recordsPerPage) {
+            hasMoreLeads = false;
+          } else {
+            currentPage++;
+            // Pequeno delay entre requisições para evitar rate limit
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
+      } catch (e) {
+        console.error(`Exception buscando página ${currentPage} da finalidade ${finalidade}:`, e);
+        if (e instanceof Error && e.name === 'AbortError') {
+          console.log('Timeout na requisição, tentando novamente...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          continue; // Tentar novamente
+        }
+        break; // Se for outro erro, parar
       }
-      
-      const data = await res.json();
-      return data;
-    } catch (e) {
-      console.error(`Exception fetching finalidade ${finalidade}:`, e);
-      return [];
     }
+
+    console.log(`Finalidade ${finalidade}: Total de ${allLeads.length} leads coletados`);
+    return allLeads;
   };
 
   try {
+    console.log('Iniciando busca completa de leads do Imoview...');
     const [aluguelData, vendaData] = await Promise.all([
-      fetchLeads(1),
-      fetchLeads(2)
+      fetchAllLeadsByPurpose(1),
+      fetchAllLeadsByPurpose(2)
     ]);
 
-    // Combinar listas. A API pode retornar um objeto com a lista dentro.
-    // Estrutura provável: { lista: [...], ... } ou array direto.
-    const extractList = (data: any) => {
-        if (!data) return [];
-        if (Array.isArray(data)) return data;
-        // Common Imoview patterns:
-        if (Array.isArray(data.lista)) return data.lista;
-        if (Array.isArray(data.atendimentos)) return data.atendimentos;
-        if (Array.isArray(data.resultado)) return data.resultado;
-        return [];
-    };
+    console.log(`Busca concluída: ${aluguelData.length} leads de aluguel, ${vendaData.length} leads de venda`);
 
-    const listaAluguel = extractList(aluguelData);
-    const listaVenda = extractList(vendaData);
-
-    const rawLeads = [...listaAluguel, ...listaVenda];
+    // Combinar listas
+    const rawLeads = [...aluguelData, ...vendaData];
 
     // Função auxiliar para converter data "DD/MM/YYYY HH:mm" para ISO
     const parseImoviewDate = (dateStr: string) => {
