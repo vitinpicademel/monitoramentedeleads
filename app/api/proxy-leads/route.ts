@@ -82,18 +82,26 @@ export async function GET(request: Request) {
     };
 
     // Mapeamento para o formato do Frontend
-    const mappedLeads = rawLeads.map((item: any) => ({
-      id: item.codigo?.toString() || Math.random().toString(),
-      nome: item.lead?.nome || 'Sem Nome',
-      telefone: item.lead?.telefone1 || item.lead?.celular || '',
-      email: item.lead?.email || '',
-      status: item.situacao || 'Novo',
-      time: item.unidadenome || 'Geral',
-      data_entrada: parseImoviewDate(item.datahoraentradalead) || new Date().toISOString(),
-      primeira_interacao: parseImoviewDate(item.datahoraultimainteracao) || null,
-      origem: item.midia || 'Site',
-      _raw: item
-    }));
+    const mappedLeads = rawLeads.map((item: any) => {
+      // Debug: mostrar estrutura do primeiro lead para identificar campos corretos
+      if (rawLeads.indexOf(item) === 0) {
+        console.log('Estrutura completa do lead Imoview:', JSON.stringify(item, null, 2));
+      }
+      
+      return {
+        id: item.codigo?.toString() || Math.random().toString(),
+        nome: item.lead?.nome || 'Sem Nome',
+        telefone: item.lead?.telefone1 || item.lead?.celular || '',
+        email: item.lead?.email || '',
+        status: item.situacao || 'Novo',
+        time: item.unidadenome || 'Geral',
+        data_entrada: parseImoviewDate(item.datahoraentradalead) || new Date().toISOString(),
+        primeira_interacao: parseImoviewDate(item.datahoraultimainteracao) || null,
+        midia: item.midia || item.origem || item.utm_campaign || 'Site', // Campo principal para filtragem
+        origem: item.midia || item.origem || item.utm_campaign || 'Site', // Manter compatibilidade
+        _raw: item
+      };
+    });
 
     // Ordenar por data mais recente
     mappedLeads.sort((a, b) => new Date(b.data_entrada).getTime() - new Date(a.data_entrada).getTime());

@@ -48,6 +48,7 @@ interface Lead {
   data_entrada: string; // ISO Date
   primeira_interacao?: string; // ISO Date
   origem?: string;
+  midia?: string; // Campo principal para filtragem por campanha/mídia
   tem_atendimento?: boolean;
 }
 
@@ -122,6 +123,9 @@ export default function Dashboard() {
   const [selectedAccount, setSelectedAccount] = useState<string>('Todas as Contas');
   const [selectedStatus, setSelectedStatus] = useState<string>('Todos os Status');
   const [datePreset, setDatePreset] = useState<string>('last_30d');
+
+  // Estado para filtro de mídia/campanha (Visão Operacional)
+  const [selectedMedia, setSelectedMedia] = useState<string>('Todas as Mídias');
 
   // Fetch Data
   const fetchLeads = async () => {
@@ -240,6 +244,59 @@ export default function Dashboard() {
 
   const currentLeads = dataMode === 'geral' ? leadsAll : leads;
 
+  // Gerar opções dinâmicas de mídia/campanha
+  const uniqueMedias = useMemo(() => {
+    const medias = new Set<string>();
+    currentLeads.forEach((lead: Lead) => {
+      if (lead.midia && lead.midia.trim() && lead.midia !== 'Site') {
+        medias.add(lead.midia.trim());
+      }
+    });
+    return Array.from(medias).sort();
+  }, [currentLeads]);
+
+  // Filtrar leads por mídia selecionada
+  const filteredLeadsByMedia = useMemo(() => {
+    if (selectedMedia === 'Todas as Mídias') {
+      return currentLeads;
+    }
+    return currentLeads.filter((lead: Lead) => lead.midia === selectedMedia);
+  }, [currentLeads, selectedMedia]);
+
+  // Calcular indicadores de funil para a mídia selecionada
+  const mediaFunnelStats = useMemo(() => {
+    if (selectedMedia === 'Todas as Mídias') {
+      return {
+        totalLeads: currentLeads.length,
+        visitas: currentLeads.filter((lead: Lead) => 
+          lead.status?.toLowerCase().includes('visita') || 
+          lead.status?.toLowerCase().includes('visiting')
+        ).length,
+        negocios: currentLeads.filter((lead: Lead) => 
+          lead.status?.toLowerCase().includes('negócio') || 
+          lead.status?.toLowerCase().includes('realizado') ||
+          lead.status?.toLowerCase().includes('vendido') ||
+          lead.status?.toLowerCase().includes('alugado')
+        ).length
+      };
+    }
+
+    const mediaLeads = currentLeads.filter((lead: Lead) => lead.midia === selectedMedia);
+    return {
+      totalLeads: mediaLeads.length,
+      visitas: mediaLeads.filter((lead: Lead) => 
+        lead.status?.toLowerCase().includes('visita') || 
+        lead.status?.toLowerCase().includes('visiting')
+      ).length,
+      negocios: mediaLeads.filter((lead: Lead) => 
+        lead.status?.toLowerCase().includes('negócio') || 
+        lead.status?.toLowerCase().includes('realizado') ||
+        lead.status?.toLowerCase().includes('vendido') ||
+        lead.status?.toLowerCase().includes('alugado')
+      ).length
+    };
+  }, [currentLeads, selectedMedia]);
+
   // Lógica de ordenação e filtragem para Meta Ads
   const sortedAndFilteredCampaigns = useMemo(() => {
     let filtered = metaCampaigns;
@@ -313,7 +370,8 @@ export default function Dashboard() {
   // Charts Data
   const leadsByHour = useMemo(() => {
     const counts: Record<string, number> = {};
-    filteredLeads.forEach(l => {
+    const leadsToUse = selectedMedia !== 'Todas as Mídias' ? filteredLeadsByMedia : filteredLeads;
+    leadsToUse.forEach(l => {
       const hour = new Date(l.data_entrada).getHours();
       const label = `${hour}:00`;
       counts[label] = (counts[label] || 0) + 1;
@@ -321,15 +379,16 @@ export default function Dashboard() {
     return Object.entries(counts)
       .map(([hour, count]) => ({ hour, leads: count }))
       .sort((a, b) => parseInt(a.hour) - parseInt(b.hour));
-  }, [filteredLeads]);
+  }, [filteredLeads, filteredLeadsByMedia, selectedMedia]);
 
   const statusDistribution = useMemo(() => {
     const counts: Record<string, number> = {};
-    filteredLeads.forEach(l => {
+    const leadsToUse = selectedMedia !== 'Todas as Mídias' ? filteredLeadsByMedia : filteredLeads;
+    leadsToUse.forEach(l => {
       counts[l.status] = (counts[l.status] || 0) + 1;
     });
     return Object.entries(counts).map(([name, value]) => ({ name, value }));
-  }, [filteredLeads]);
+  }, [filteredLeads, filteredLeadsByMedia, selectedMedia]);
 
   const leadsByTeam = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -528,6 +587,63 @@ export default function Dashboard() {
               {team}
             </button>
           ))}
+        </div>
+        )}
+
+        {/* Filtro de Mídia - Apenas para Visão Operacional */}
+        {viewMode === 'operacional' && uniqueMedias.length > 0 && (
+        <div className="bg-white/90 backdrop-blur rounded-2xl border border-[#684e3a]/20 p-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex items-center gap-2 text-xs sm:text-sm tracking-wide uppercase text-[#684e3a]">
+              <Target size={16} />
+              <span className="font-medium">Filtrar por Mídia/Campanha</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedMedia('Todas as Mídias')}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium tracking-wide transition-all ${
+                  selectedMedia === 'Todas as Mídias'
+                    ? 'bg-[#c89968] text-[#FAF9F6] shadow-sm'
+                    : 'bg-white/90 text-[#3d2e28] border border-[#684e3a]/30 hover:border-[#c89968]'
+                }`}
+              >
+                Todas as Mídias
+              </button>
+              {uniqueMedias.map((media: string) => (
+                <button
+                  key={media}
+                  onClick={() => setSelectedMedia(media)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium tracking-wide transition-all ${
+                    selectedMedia === media
+                      ? 'bg-[#c89968] text-[#FAF9F6] shadow-sm'
+                      : 'bg-white/90 text-[#3d2e28] border border-[#684e3a]/30 hover:border-[#c89968]'
+                  }`}
+                >
+                  {media}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* Indicadores de Funil */}
+          {selectedMedia !== 'Todas as Mídias' && (
+            <div className="mt-4 pt-4 border-t border-[#684e3a]/20">
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="bg-[#FAF9F6] rounded-lg p-3">
+                  <div className="text-2xl font-bold text-[#3d2e28]">{mediaFunnelStats.totalLeads}</div>
+                  <div className="text-xs text-[#684e3a] uppercase tracking-wide">Total Leads</div>
+                </div>
+                <div className="bg-[#FAF9F6] rounded-lg p-3">
+                  <div className="text-2xl font-bold text-[#c89968]">{mediaFunnelStats.visitas}</div>
+                  <div className="text-xs text-[#684e3a] uppercase tracking-wide">Visitas</div>
+                </div>
+                <div className="bg-[#FAF9F6] rounded-lg p-3">
+                  <div className="text-2xl font-bold text-[#3d2e28]">{mediaFunnelStats.negocios}</div>
+                  <div className="text-xs text-[#684e3a] uppercase tracking-wide">Negócios</div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         )}
 
@@ -879,10 +995,10 @@ export default function Dashboard() {
                 </p>
               </div>
               <span className="text-xs sm:text-sm text-[#684e3a] font-medium">
-                {filteredLeads.length} registros
+                {selectedMedia !== 'Todas as Mídias' ? filteredLeadsByMedia.length : filteredLeads.length} registros
               </span>
             </div>
-            {filteredLeads.length > 0 ? (
+            {(selectedMedia !== 'Todas as Mídias' ? filteredLeadsByMedia : filteredLeads).length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm text-[#3d2e28]">
                   <thead className="bg-[#FAF9F6] text-[11px] uppercase font-semibold tracking-[0.18em] text-[#684e3a]">
@@ -897,7 +1013,7 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#684e3a]/10">
-                    {filteredLeads.map(lead => {
+                    {(selectedMedia !== 'Todas as Mídias' ? filteredLeadsByMedia : filteredLeads).map(lead => {
                       const { isLate, label, status } = getSLAInfo(
                         lead.data_entrada,
                         lead.primeira_interacao
