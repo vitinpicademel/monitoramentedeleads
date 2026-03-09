@@ -160,12 +160,19 @@ export default function Dashboard() {
 
       setLeads(normalizedLeads);
     } catch (err: unknown) {
+      console.error('Erro completo no fetchLeads:', err);
+      
       if (err instanceof Error) {
-        setError(err.message || 'Falha ao carregar leads');
+        // Se for erro da API com detalhes, exibir completo
+        if (err.message.includes('Falha na API do Imoview')) {
+          setError(`🚨 ${err.message}`);
+        } else {
+          setError(`❌ ${err.message || 'Falha ao carregar leads'}`);
+        }
       } else if (typeof err === 'string') {
-        setError(err || 'Falha ao carregar leads');
+        setError(`❌ ${err || 'Falha ao carregar leads'}`);
       } else {
-        setError('Falha ao carregar leads');
+        setError('❌ Falha ao carregar leads');
       }
     } finally {
       setLoading(false);
@@ -451,15 +458,15 @@ export default function Dashboard() {
   if (error) {
     return (
       <div className="min-h-screen bg-[#FAF9F6] flex items-center justify-center p-4">
-        <div className="bg-white/90 backdrop-blur p-8 rounded-2xl shadow-sm border border-[#c89968]/30 max-w-lg w-full">
-          <div className="flex items-center gap-3 mb-4 text-[#3d2e28]">
+        <div className="bg-white/90 backdrop-blur p-8 rounded-2xl shadow-sm border border-red-300 max-w-lg w-full">
+          <div className="flex items-center gap-3 mb-4 text-red-600">
             <AlertCircle size={32} />
             <h2 className="text-2xl font-semibold tracking-wide">Erro de Conexão</h2>
           </div>
-          <p className="text-sm text-[#684e3a] mb-6 leading-relaxed">{error}</p>
+          <p className="text-sm text-red-700 mb-6 leading-relaxed font-mono bg-red-50 p-3 rounded-lg border border-red-200">{error}</p>
           <button 
             onClick={() => viewMode === 'meta-ads' ? fetchMetaAds() : fetchLeads()}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#3d2e28] text-[#FAF9F6] text-sm font-medium tracking-wide hover:bg-[#684e3a] transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-red-600 text-white text-sm font-medium tracking-wide hover:bg-red-700 transition-colors"
           >
             <RefreshCcw size={18} />
             Tentar Novamente
